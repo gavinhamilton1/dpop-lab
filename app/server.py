@@ -32,6 +32,10 @@ links = {}
 
 # Configuration
 BASE_DIR = os.path.dirname(__file__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info("DPoP Lab Server started")
+logger.info(f"Serving files from {BASE_DIR}")
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory=BASE_DIR), name="static")
