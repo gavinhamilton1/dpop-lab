@@ -33,6 +33,16 @@ links = {}
 
 # Configuration
 BASE_DIR = os.path.dirname(__file__)
+
+# Configuration - can be overridden by environment variables
+PROXY_PREFIX = os.environ.get('PROXY_PREFIX', '/proxy/8000/')  # e.g., '/proxy/8000/'
+HOST = os.environ.get('HOST', '0.0.0.0')
+PORT = int(os.environ.get('PORT', 8000))
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+
+if PROXY_PREFIX:
+    logger.info(f"Configured with proxy prefix: {PROXY_PREFIX}")
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.info("DPoP Lab Server started")
@@ -54,6 +64,15 @@ async def index():
     """Serve the main lab page."""
     with open(os.path.join(BASE_DIR, "index.html"), "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
+
+@app.get("/config")
+async def get_config():
+    """Get server configuration including proxy prefix."""
+    return {
+        "proxy_prefix": PROXY_PREFIX,
+        "base_url": "/",
+        "static_url": "/static/"
+    }
 
 
 
@@ -648,6 +667,10 @@ if __name__ == "__main__":
     local_ip = socket.gethostbyname(hostname)
     
     print("🚀 Starting DPoP Lab Server...")
-    print(f"📖 Open http://localhost:8000 or http://{local_ip}:8000 to access the lab")
-    print("🔧 API documentation: http://localhost:8000/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+    if PROXY_PREFIX:
+        print(f"🔧 Configured with proxy prefix: {PROXY_PREFIX}")
+        print(f"📖 Access via proxy at: {PROXY_PREFIX}")
+    else:
+        print(f"📖 Open http://localhost:{PORT} or http://{local_ip}:{PORT} to access the lab")
+    print(f"🔧 API documentation: http://localhost:{PORT}/docs")
+    uvicorn.run(app, host=HOST, port=PORT, reload=False)

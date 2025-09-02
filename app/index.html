@@ -179,8 +179,68 @@
     </div>
 
     <!-- QR Code Library -->
-    <script src="/static/qrcode.min.js" onerror="this.onerror=null; this.src='/proxy/8000/static/qrcode.min.js'"></script>></script>
-    <script src="/static/utils.js" onerror="this.onerror=null; this.src='/proxy/8000/static/utils.js'"></script>
-    <script src="/static/app.js" onerror="this.onerror=null; this.src='/proxy/8000/static/app.js'"></script>
+    <script src="/static/qrcode.min.js"></script>
+    <script src="/static/utils.js"></script>
+    <script src="/static/app.js"></script>
+    <script>
+        // Global proxy prefix detection and URL rewriting
+        (function() {
+            // Detect proxy prefix from current URL
+            function detectProxyPrefix() {
+                const pathname = window.location.pathname;
+                
+                // Check for common proxy patterns
+                if (pathname.includes('/proxy/')) {
+                    const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+                    if (proxyMatch) {
+                        return proxyMatch[1];
+                    }
+                }
+                
+                // Check for other common lab prefixes
+                if (pathname.includes('/lab/')) {
+                    const labMatch = pathname.match(/^(\/lab\/)/);
+                    if (labMatch) {
+                        return labMatch[1];
+                    }
+                }
+                
+                return '';
+            }
+            
+            // Rewrite all static resource URLs to include proxy prefix if present
+            function rewriteStaticUrls() {
+                const proxyPrefix = detectProxyPrefix();
+                if (!proxyPrefix) return;
+                
+                console.log('Detected proxy prefix:', proxyPrefix);
+                
+                // Update script sources
+                const scripts = document.querySelectorAll('script[src^="/static/"]');
+                scripts.forEach(script => {
+                    const currentSrc = script.getAttribute('src');
+                    const newSrc = currentSrc.replace('/static/', proxyPrefix + 'static/');
+                    script.setAttribute('src', newSrc);
+                    console.log('Updated script src:', currentSrc, '->', newSrc);
+                });
+                
+                // Update any other static resources
+                const links = document.querySelectorAll('link[href^="/static/"]');
+                links.forEach(link => {
+                    const currentHref = link.getAttribute('href');
+                    const newHref = currentHref.replace('/static/', proxyPrefix + 'static/');
+                    link.setAttribute('href', newHref);
+                    console.log('Updated link href:', currentHref, '->', newHref);
+                });
+            }
+            
+            // Run URL rewriting when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', rewriteStaticUrls);
+            } else {
+                rewriteStaticUrls();
+            }
+        })();
+    </script>
 </body>
 </html>

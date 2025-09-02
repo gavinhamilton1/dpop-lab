@@ -556,6 +556,31 @@ class APIUtils {
 // ============================================================================
 
 class URLUtils {
+    static getProxyPrefix() {
+        // Detect if we're running behind a reverse proxy with path prefix
+        // Common patterns: /proxy/8000/, /proxy/port/, /lab/, etc.
+        const pathname = window.location.pathname;
+        
+        // Check for common proxy patterns
+        if (pathname.includes('/proxy/')) {
+            // Extract the proxy prefix (e.g., /proxy/8000/)
+            const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+            if (proxyMatch) {
+                return proxyMatch[1];
+            }
+        }
+        
+        // Check for other common lab prefixes
+        if (pathname.includes('/lab/')) {
+            const labMatch = pathname.match(/^(\/lab\/)/);
+            if (labMatch) {
+                return labMatch[1];
+            }
+        }
+        
+        return '';
+    }
+    
     static getBaseURL() {
         // Get the current page's origin (protocol + hostname + port)
         return window.location.origin;
@@ -564,7 +589,26 @@ class URLUtils {
     static getAPIURL(endpoint) {
         // Remove leading slash if present to avoid double slashes
         const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+        const proxyPrefix = this.getProxyPrefix();
+        
+        // If we have a proxy prefix, include it in the URL
+        if (proxyPrefix) {
+            return `${this.getBaseURL()}${proxyPrefix}${cleanEndpoint}`;
+        }
+        
         return `${this.getBaseURL()}/${cleanEndpoint}`;
+    }
+    
+    static getStaticURL(path) {
+        // For static files (JS, CSS, etc.), also include proxy prefix if present
+        const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+        const proxyPrefix = this.getProxyPrefix();
+        
+        if (proxyPrefix) {
+            return `${proxyPrefix}${cleanPath}`;
+        }
+        
+        return `/${cleanPath}`;
     }
 }
 
