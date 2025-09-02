@@ -1,6 +1,7 @@
 // DPoP Lab Utilities
 // Helper functions for cryptographic operations and storage
 
+
 // ============================================================================
 // IndexedDB Storage Utilities
 // ============================================================================
@@ -367,29 +368,132 @@ class WebAuthnUtils {
     }
 }
 
+
+
 // ============================================================================
 // QR Code Utilities
 // ============================================================================
 
 class QRCodeUtils {
-    static async generateQRCode(text, elementId) {
-        // Simple QR code generation using a library
-        // In a real implementation, you might use a library like qrcode.js
-        
+    static async generateQRCode(text, elementId, size = 200, errorCorrection = 'M') {
+        if (!text || !text.trim()) {
+            throw new Error('Text input is required');
+        }
+
         const element = document.getElementById(elementId);
         if (!element) {
             throw new Error(`Element with id '${elementId}' not found`);
         }
-        
-        // For lab purposes, create a simple text representation
-        element.innerHTML = `
-            <div style="border: 2px solid #000; padding: 10px; display: inline-block; font-family: monospace; font-size: 8px; line-height: 8px;">
-                <div>QR Code for:</div>
-                <div style="word-break: break-all; max-width: 200px;">${text}</div>
-            </div>
-        `;
-        
-        return true;
+
+        // Check if QRCode library is available
+        if (typeof QRCode === 'undefined') {
+            throw new Error('QRCode library not loaded. Please ensure qrcode.min.js is loaded before utils.js');
+        }
+
+        try {
+            // Clear previous content
+            element.innerHTML = '';
+            
+            // Debug: log available QRCode methods
+            console.log('QRCode object:', QRCode);
+            console.log('QRCode methods:', Object.getOwnPropertyNames(QRCode));
+            
+            // Try different QR code library APIs
+            if (typeof QRCode.toCanvas === 'function') {
+                // Standard qrcode.js API
+                await new Promise((resolve, reject) => {
+                    QRCode.toCanvas(element, text.trim(), {
+                        width: size,
+                        margin: 2,
+                        errorCorrectionLevel: errorCorrection,
+                        color: {
+                            dark: '#000000',
+                            light: '#FFFFFF'
+                        }
+                    }, (error) => {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        resolve(true);
+                    });
+                });
+                
+                // Display the link text underneath the QR code
+                const linkTextElement = document.getElementById('qrLinkText');
+                if (linkTextElement) {
+                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${text.trim()}</code>`;
+                }
+            } else if (typeof QRCode.toDataURL === 'function') {
+                // Alternative API - generate data URL and create img element
+                const dataUrl = await new Promise((resolve, reject) => {
+                    QRCode.toDataURL(text.trim(), {
+                        width: size,
+                        margin: 2,
+                        errorCorrectionLevel: errorCorrection,
+                        color: {
+                            dark: '#000000',
+                            light: '#FFFFFF'
+                        }
+                    }, (error, url) => {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        resolve(url);
+                    });
+                });
+                
+                const img = document.createElement('img');
+                img.src = dataUrl;
+                img.alt = 'QR Code';
+                element.appendChild(img);
+                
+                // Display the link text underneath the QR code
+                const linkTextElement = document.getElementById('qrLinkText');
+                if (linkTextElement) {
+                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${text.trim()}</code>`;
+                }
+            } else if (typeof QRCode === 'function') {
+                // Constructor-based API (like your working example)
+                try {
+                    // Use the exact same approach as your working function
+                    new QRCode(element, text.trim());
+                    
+                    // Display the link text underneath the QR code
+                    const linkTextElement = document.getElementById('qrLinkText');
+                    if (linkTextElement) {
+                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${text.trim()}</code>`;
+                    }
+                    
+                    return true;
+                } catch (qrError) {
+                    console.error('QR code creation failed:', qrError);
+                    // Fallback to text representation
+                    element.innerHTML = `
+                        <div style="border: 2px solid #000; padding: 10px; display: inline-block; font-family: monospace; font-size: 12px; line-height: 14px; background: white;">
+                            <div style="font-weight: bold; margin-bottom: 5px;">QR Code (Text Fallback)</div>
+                            <div style="word-break: break-all; max-width: 200px;">${text}</div>
+                            <div style="font-size: 10px; color: #666; margin-top: 5px;">Library: ${Object.getOwnPropertyNames(QRCode).join(', ')}</div>
+                        </div>
+                    `;
+                    
+                    // Also display link text for fallback
+                    const linkTextElement = document.getElementById('qrLinkText');
+                    if (linkTextElement) {
+                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${text.trim()}</code>`;
+                    }
+                    
+                    return true;
+                }
+            } else {
+                throw new Error(`Unsupported QR code library. Available methods: ${Object.getOwnPropertyNames(QRCode).join(', ')}`);
+            }
+            
+            return true;
+        } catch (error) {
+            throw new Error(`QR code generation failed: ${error.message}`);
+        }
     }
 }
 
@@ -448,6 +552,23 @@ class APIUtils {
 }
 
 // ============================================================================
+// URL Utilities
+// ============================================================================
+
+class URLUtils {
+    static getBaseURL() {
+        // Get the current page's origin (protocol + hostname + port)
+        return window.location.origin;
+    }
+    
+    static getAPIURL(endpoint) {
+        // Remove leading slash if present to avoid double slashes
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+        return `${this.getBaseURL()}/${cleanEndpoint}`;
+    }
+}
+
+// ============================================================================
 // Constants
 // ============================================================================
 
@@ -471,6 +592,7 @@ window.DPoPLabUtils = {
     DPoPUtils,
     WebAuthnUtils,
     QRCodeUtils,
+    URLUtils,
     APIUtils,
     STORAGE_KEYS
 };

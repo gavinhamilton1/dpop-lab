@@ -22,7 +22,7 @@ This is the lab application for the DPoP Hands-On Lab. Participants will impleme
    ```
 
 3. **Open the lab:**
-   - Navigate to http://localhost:8000
+   - Navigate to the URL shown when you start the server
    - You should see the DPoP Lab interface
 
 ## 📁 Project Structure

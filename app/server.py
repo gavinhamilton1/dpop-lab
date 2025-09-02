@@ -33,6 +33,9 @@ links = {}
 # Configuration
 BASE_DIR = os.path.dirname(__file__)
 
+# Mount static files directory
+app.mount("/static", StaticFiles(directory=BASE_DIR), name="static")
+
 def generate_nonce() -> str:
     """Generate a random nonce for DPoP challenges."""
     return base64.urlsafe_b64encode(secrets.token_bytes(18)).decode('utf-8').rstrip('=')
@@ -47,17 +50,7 @@ async def index():
     with open(os.path.join(BASE_DIR, "index.html"), "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
-@app.get("/utils.js")
-async def utils_js():
-    """Serve the utils.js file."""
-    with open(os.path.join(BASE_DIR, "utils.js"), "r", encoding="utf-8") as f:
-        return Response(content=f.read(), media_type="application/javascript")
 
-@app.get("/app.js")
-async def app_js():
-    """Serve the app.js file."""
-    with open(os.path.join(BASE_DIR, "app.js"), "r", encoding="utf-8") as f:
-        return Response(content=f.read(), media_type="application/javascript")
 
 # ============================================================================
 # Session Management Endpoints
@@ -643,7 +636,13 @@ async def admin_flush():
 
 if __name__ == "__main__":
     import uvicorn
+    import socket
+    
+    # Get local IP address
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    
     print("🚀 Starting DPoP Lab Server...")
-    print("📖 Open http://localhost:8000 to access the lab")
+    print(f"📖 Open http://localhost:8000 or http://{local_ip}:8000 to access the lab")
     print("🔧 API documentation: http://localhost:8000/docs")
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)

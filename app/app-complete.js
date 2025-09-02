@@ -163,7 +163,7 @@ class DPoPLab {
             // Step 2.3 - Create DPoP JWT with required claims
             this.log('[INFO] Creating DPoP proof JWT...');
             const dpopJwt = await DPoPLabUtils.DPoPUtils.createDPoPProof(
-                'http://localhost:8000/dpop/bind',
+                DPoPLabUtils.URLUtils.getAPIURL('dpop/bind'),
                 'POST',
                 null, // no nonce for initial binding
                 dpopKeyPair.privateKey,
@@ -228,7 +228,7 @@ class DPoPLab {
             // Step 3.2 - Create DPoP proof for API request
             this.log('[INFO] Creating DPoP proof for API request...');
             const dpopProof = await DPoPLabUtils.DPoPUtils.createDPoPProof(
-                'http://localhost:8000/api/test',
+                DPoPLabUtils.URLUtils.getAPIURL('api/test'),
                 'POST',
                 nonceRecord?.value || null,
                 dpopRecord.privateKey,

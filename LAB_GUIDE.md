@@ -13,7 +13,7 @@ You will implement a complete browser identity and security system with:
 
 ## Prerequisites
 
-- Lab application running on http://localhost:8000
+- Lab application running on your local server (URL will be shown when you start the server)
 - Modern browser with WebAuthn support
 - Basic JavaScript knowledge
 - Understanding of cryptographic concepts
@@ -163,7 +163,7 @@ async bindDPoP() {
         // Step 2.3 - Create DPoP JWT with required claims
         this.log('[INFO] Creating DPoP proof JWT...');
         const dpopJwt = await DPoPLabUtils.DPoPUtils.createDPoPProof(
-            'http://localhost:8000/dpop/bind',
+            DPoPLabUtils.URLUtils.getAPIURL('dpop/bind'),
             'POST',
             null, // no nonce for initial binding
             dpopKeyPair.privateKey,
@@ -240,7 +240,7 @@ async testAPI() {
         // Step 3.2 - Create DPoP proof for API request
         this.log('[INFO] Creating DPoP proof for API request...');
         const dpopProof = await DPoPLabUtils.DPoPUtils.createDPoPProof(
-            'http://localhost:8000/api/test',
+            DPoPLabUtils.URLUtils.getAPIURL('api/test'),
             'POST',
             nonceRecord?.value || null,
             dpopRecord.privateKey,
