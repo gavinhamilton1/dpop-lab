@@ -440,25 +440,11 @@ class QRCodeUtils {
                         let textToDisplay = displayText || linkUrl.trim();
                         console.log('[QRCodeUtils] textToDisplay:', textToDisplay);
                         // If displayText is a local URL (doesn't start with http), add proxy prefix
-                        if (displayText && !displayText.startsWith('http')) {
-                            const pathname = window.location.pathname;
-                            console.log('[QRCodeUtils] pathname:', pathname);
-                            if (pathname.includes('/proxy/')) {
-                                const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
-                                if (proxyMatch) {
-                                    const proxyPrefix = proxyMatch[1];
-                                    textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
-                                    console.log('[QRCodeUtils] Added proxy prefix to displayText (constructor):', { original: displayText, withProxy: textToDisplay });
-                                }
-                            } else if (pathname.includes('/lab/')) {
-                                const labMatch = pathname.match(/^(\/lab\/)/);
-                                if (labMatch) {
-                                    const labPrefix = labMatch[1];
-                                    textToDisplay = `${window.location.origin}${labPrefix}${displayText}`;
-                                    console.log('[QRCodeUtils] Added lab prefix to displayText (constructor):', { original: displayText, withLab: textToDisplay });
-                                }
+                            const proxyPrefix = URLUtils.getProxyPrefix();
+                            if (proxyPrefix) {
+                                textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
+                                console.log('[QRCodeUtils] Added proxy prefix to displayText (constructor):', { original: displayText, withProxy: textToDisplay });
                             }
-                        }
                         
                         console.log('[QRCodeUtils] Display text being set (constructor):', { displayText, linkUrl, textToDisplay });
                         linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
@@ -484,21 +470,10 @@ class QRCodeUtils {
                         
                         // If displayText is a local URL (doesn't start with http), add proxy prefix
                         if (displayText && !displayText.startsWith('http')) {
-                            const pathname = window.location.pathname;
-                            if (pathname.includes('/proxy/')) {
-                                const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
-                                if (proxyMatch) {
-                                    const proxyPrefix = proxyMatch[1];
-                                    textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
-                                    console.log('[QRCodeUtils] Added proxy prefix to displayText (fallback):', { original: displayText, withProxy: textToDisplay });
-                                }
-                            } else if (pathname.includes('/lab/')) {
-                                const labMatch = pathname.match(/^(\/lab\/)/);
-                                if (labMatch) {
-                                    const labPrefix = labMatch[1];
-                                    textToDisplay = `${window.location.origin}${labPrefix}${displayText}`;
-                                    console.log('[QRCodeUtils] Added lab prefix to displayText (fallback):', { original: displayText, withLab: textToDisplay });
-                                }
+                            const proxyPrefix = URLUtils.getProxyPrefix();
+                            if (proxyPrefix) {
+                                textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
+                                console.log('[QRCodeUtils] Added proxy prefix to displayText (fallback):', { original: displayText, withProxy: textToDisplay });
                             }
                         }
                         
