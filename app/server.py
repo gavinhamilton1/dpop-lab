@@ -454,29 +454,37 @@ async def link_start(request: Request):
         }
         
         # Generate linking URL with proxy path support
-        base_url = str(request.base_url).rstrip('/')
+        # The client is calling this endpoint through APIUtils which handles proxy paths
+        # So we need to construct the link URL to match the client's proxy path
         
-        # Check if we're behind a proxy and include the path
+        # Get the current page's origin and path to construct the correct link URL
+        from urllib.parse import urlparse
+        current_url = str(request.url)
+        parsed_url = urlparse(current_url)
+        
+        # Extract the proxy path from the current request URL
         proxy_path = ""
-        if hasattr(request, 'scope') and 'path' in request.scope:
-            path = request.scope['path']
-            # Check for common proxy patterns
-            if '/proxy/' in path:
-                proxy_match = re.match(r'^(\/proxy\/\d+\/)', path)
-                if proxy_match:
-                    proxy_path = proxy_match.group(1)
-            elif '/lab/' in path:
-                lab_match = re.match(r'^(\/lab\/)', path)
-                if lab_match:
-                    proxy_path = lab_match.group(1)
+        if '/proxy/' in parsed_url.path:
+            proxy_match = re.match(r'^(\/proxy\/\d+\/)', parsed_url.path)
+            if proxy_match:
+                proxy_path = proxy_match.group(1)
+        elif '/lab/' in parsed_url.path:
+            lab_match = re.match(r'^(\/lab\/)', parsed_url.path)
+            if lab_match:
+                proxy_path = lab_match.group(1)
         
-        # Construct the full URL with proxy path if present
+        # Construct the link URL
         if proxy_path:
-            # Remove the proxy path from base_url to avoid duplication
-            clean_base = base_url.replace(proxy_path, '')
-            link_url = f"{clean_base}{proxy_path}link/{link_id}"
+            # We're behind a proxy, construct URL with proxy path
+            link_url = f"{parsed_url.scheme}://{parsed_url.netloc}{proxy_path}link/{link_id}"
         else:
-            link_url = f"{base_url}/link/{link_id}"
+            # No proxy, use standard URL
+            link_url = f"{parsed_url.scheme}://{parsed_url.netloc}/link/{link_id}"
+        
+        logger.info(f"Linking: request.url = {current_url}")
+        logger.info(f"Linking: parsed path = {parsed_url.path}")
+        logger.info(f"Linking: detected proxy_path = {proxy_path}")
+        logger.info(f"Linking: generated link_url = {link_url}")
         
         return {
             "link_id": link_id,
