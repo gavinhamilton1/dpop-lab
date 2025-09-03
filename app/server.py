@@ -20,6 +20,7 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Create FastAPI app
 app = FastAPI(title="DPoP Lab Server", version="1.0.0")
 
 # Add CORS middleware
@@ -39,17 +40,20 @@ links = {}
 BASE_DIR = os.path.dirname(__file__)
 
 # Configuration - can be overridden by environment variables
-PROXY_PREFIX = os.environ.get('PROXY_PREFIX', '/proxy/8000/')  # e.g., '/proxy/8000/'
+PROXY_PREFIX = os.environ.get('PROXY_PREFIX', '')  # e.g., '/proxy/8000/'
 HOST = os.environ.get('HOST', '0.0.0.0')
 PORT = int(os.environ.get('PORT', 8000))
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
 if PROXY_PREFIX:
     logger.info(f"Configured with proxy prefix: {PROXY_PREFIX}")
-
+    # Set root_path for FastAPI to handle proxy paths
+    app.root_path = PROXY_PREFIX
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory=BASE_DIR), name="static")
+
+
 
 def generate_nonce() -> str:
     """Generate a random nonce for DPoP challenges."""
@@ -715,7 +719,9 @@ if __name__ == "__main__":
     if PROXY_PREFIX:
         print(f"🔧 Configured with proxy prefix: {PROXY_PREFIX}")
         print(f"📖 Access via proxy at: {PROXY_PREFIX}")
+        print(f"🔧 Server will handle routes with prefix: {PROXY_PREFIX}")
     else:
         print(f"📖 Open http://localhost:{PORT} or http://{local_ip}:{PORT} to access the lab")
     print(f"🔧 API documentation: http://localhost:{PORT}/docs")
+    
     uvicorn.run(app, host=HOST, port=PORT, reload=False)
