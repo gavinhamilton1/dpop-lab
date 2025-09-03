@@ -2,6 +2,7 @@
  * DPoP Lab
  * 
  * This file contains the main application logic for the DPoP lab.
+ * This code is not intended for production use.
  */
 
 // Import utilities from utils.js

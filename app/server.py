@@ -2,6 +2,7 @@
 """
 DPoP Lab Server - Simplified FastAPI implementation
 This server provides the backend API endpoints for the DPoP lab.
+This code is not intended for production use.
 """
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -142,11 +143,6 @@ def verify_dpop_proof(dpop_header: str, dpop_bind: str, http_method: str, http_u
             print(f"[ERROR] DPoP proof timestamp in future: {iat - current_time} seconds")
             return False, {}
         
-        # Additional validation: check if this matches the binding claims
-        # In a real implementation, you would also:
-        # 1. Extract the public key from the DPoP-Bind token
-        # 2. Verify the JWT signature using that public key
-        # 3. Verify the DPoP-Bind token hash matches the JWT
         
         # Step 1: Extract the public key from the DPoP-Bind token
         if not dpop_bind or not dpop_bind.startswith('bind_'):
@@ -416,9 +412,6 @@ async def dpop_bind(request: Request):
         # Verify and extract DPoP JWT
         try:
             print(f"[DEBUG] Attempting to decode DPoP JWT...")
-            
-            # Decode the JWT header and payload separately
-
             
             # Split the JWT into parts
             parts = dpop_jwt.split('.')
