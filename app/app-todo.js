@@ -302,18 +302,114 @@ class DPoPLab {
     // ============================================================================
 
     async pollForLinkCompletion(linkId) {
-        // TODO: Step 5.6 - Implement polling for link completion using PollingUtils
-        // Hint: Use PollingUtils.pollForCustomStatus() with a custom function that checks both services:
-        // 1. Local: APIUtils.get('/link/status/{linkId}') until status is 'linked'
-        // 2. Internet: InternetServiceUtils.verifyLink(linkId) until found is true
-        // Use maxAttempts: 60, interval: 5000, and handle success/timeout/error callbacks
-        // This allows mobile devices to complete the link via either service
+        // Use the generic polling utility to check both local and internet services
+        try {
+            await PollingUtils.pollForCustomStatus(
+                // Check both local and internet services
+                async () => {
+                    // Check local service first
+                    try {
+                        const localData = await APIUtils.get(`/link/status/${linkId}`);
+                        if (localData.status === 'linked') {
+                            this.log('[INFO] Link completed via local service!');
+                            return { success: true, source: 'local', data: localData };
+                        }
+                    } catch (localError) {
+                        this.log('[WARN] Local service check failed:', localError);
+                    }
+                    
+                    // Check internet service
+                    try {
+                        const internetData = await InternetServiceUtils.verifyLink(linkId);
+                        if (internetData.found) {
+                            this.log('[INFO] Link completed via internet service!');
+                            return { success: true, source: 'internet', data: internetData };
+                        }
+                    } catch (internetError) {
+                        this.log('[WARN] Internet service check failed:', internetError);
+                    }
+                    
+                    // Neither service shows completion
+                    return { success: false };
+                },
+                (result) => result.success, // Check if either service shows completion
+                {
+                    maxAttempts: 60, // 5 minutes max
+                    interval: 5000, // Check every 5 seconds
+                    onAttempt: (attempt, maxAttempts) => {
+                        this.log(`[INFO] Checking link status (attempt ${attempt}/${maxAttempts})...`);
+                    },
+                    onSuccess: (result) => {
+                        this.log(`[INFO] Link completed by mobile device via ${result.source} service!`);
+                        this.state.isLinked = true;
+                        this.updateState();
+                        this.setSuccess('linkBtn', 'Device linked!');
+                        this.log('[SUCCESS] Cross-device linking established', result.data);
+                        
+                        // Hide QR code and manual completion button
+                        document.getElementById('qrContainer').style.display = 'none';
+                        document.getElementById('completeLinkBtn').style.display = 'none';
+                        this.log('[INFO] QR code and manual completion button hidden after successful linking');
+                    },
+                    onTimeout: () => {
+                        this.log('[WARN] Link polling timed out after 5 minutes');
+                        this.setError('linkBtn', 'Linking timed out');
+                        document.getElementById('qrContainer').style.display = 'none';
+                        document.getElementById('completeLinkBtn').style.display = 'none';
+                    },
+                    onError: (error, attempt, maxAttempts) => {
+                        this.log('[ERROR] Link status check failed:', error);
+                        if (attempt >= maxAttempts) {
+                            this.setError('linkBtn', 'Linking failed');
+                            document.getElementById('qrContainer').style.display = 'none';
+                            document.getElementById('completeLinkBtn').style.display = 'none';
+                        }
+                    }
+                }
+            );
+        } catch (error) {
+            // Polling utility handles most errors, but catch any unexpected ones
+            this.log('[ERROR] Unexpected error during link polling:', error);
+        }
     }
 
     async completeLinkManually() {
-        // TODO: Step 5.7 - Implement manual link completion for testing
-        // Hint: Call /link/complete/{linkId} with device information (device_type, user_agent, timestamp)
-        // Update state, UI, and hide QR code and manual completion button
+        if (!this.currentLinkId) {
+            this.log('[ERROR] No active link to complete');
+            return;
+        }
+    
+        this.setLoading('completeLinkBtn', 'Completing...');
+        
+        try {
+            this.log('[INFO] Manually completing link...');
+            
+            // Step 5.5 - Simulate mobile device completing the link
+            const response = await APIUtils.post(`/link/complete/${this.currentLinkId}`, {
+                device_type: 'mobile',
+                user_agent: navigator.userAgent,
+                timestamp: Date.now()
+            });
+            
+            this.log('[INFO] Manual link completion successful', response);
+            
+            // The polling function will detect the completion and update the UI
+            // But we can also update immediately for better UX
+            this.state.isLinked = true;
+            this.updateState();
+            this.setSuccess('linkBtn', 'Device linked!');
+            this.setSuccess('completeLinkBtn', 'Completed!');
+            
+            // Hide QR code and manual completion button
+            document.getElementById('qrContainer').style.display = 'none';
+            document.getElementById('completeLinkBtn').style.display = 'none';
+            
+            this.log('[SUCCESS] Manual link completion successful');
+            
+        } catch (error) {
+            this.setError('completeLinkBtn', 'Completion failed');
+            this.log('[ERROR] Manual link completion failed:', error);
+        }
     }
 
     // ============================================================================

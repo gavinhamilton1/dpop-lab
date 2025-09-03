@@ -1,7 +1,8 @@
 /**
- * DPoP Lab
+ * DPoP Lab - Student Implementation File
  * 
  * This file contains the main application logic for the DPoP lab.
+ * Students should implement the TODO sections to complete the lab.
  */
 
 // Import utilities from utils.js
@@ -142,7 +143,7 @@ class DPoPLab {
             const nonce = nonceRecord.value;
             this.log('[INFO] Nonce retrieved', { nonce_length: nonce?.length || 0 });
             
-            // Step 1.7 - Create BIK JWS with nonce and public key.  there are 3 parts to a JWS: header, payload, and signature
+            // Step 1.7 - Create BIK JWS with nonce and public key. There are 3 parts to a JWS: header, payload, and signature
             this.log('[INFO] Creating BIK JWS with nonce and public key...');
             
             const now = Math.floor(Date.now() / 1000);
@@ -477,7 +478,7 @@ class DPoPLab {
                 this.log('[INFO] Raw credentials from server:', webauthnOptions.allowCredentials);
                 
                 // Log each credential's properties for debug and demonstration purposes
-                //Credentials are a server record of the passkey, they are not the passkey itself.  credential -> challenge -> passkey -> signed message -> server -> verified!
+                //Credentials are a server record of the passkey, they are not the passkey itself. credential -> challenge -> passkey -> signed message -> server -> verified!
                 webauthnOptions.allowCredentials.forEach((cred, index) => {
                     this.log(`[INFO] Credential ${index + 1} properties:`, {
                         type: cred.type, // Always 'public-key' for WebAuthn - identifies this as a WebAuthn credential (not a password or other auth method)
@@ -579,7 +580,8 @@ class DPoPLab {
             const response = await APIUtils.post('/link/start');
             this.log('[INFO] Link initiated', { 
                 link_id: response.link_id,
-                link_url_length: response.link_url?.length || 0 
+                link_url_length: response.link_url?.length || 0,
+                link_url: response.link_url
             });
             
             // Step 5.2 - Link initiated, waiting for mobile device to register
@@ -619,19 +621,12 @@ class DPoPLab {
         }
     }
 
-
-
-
-
-
-
-
     // ============================================================================
     // Utility Methods For Linking (No changes needed)
     // ============================================================================
 
     async pollForLinkCompletion(linkId) {
-        // Use the custom polling utility to check both local and internet services
+        // Use the generic polling utility to check both local and internet services
         try {
             await PollingUtils.pollForCustomStatus(
                 // Check both local and internet services
