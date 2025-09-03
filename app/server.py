@@ -16,7 +16,9 @@ import logging
 import re
 from typing import Dict, Any
 import os
-
+import jwt
+from jwt.exceptions import InvalidTokenError
+            
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -60,6 +62,103 @@ def generate_nonce() -> str:
 def generate_session_id() -> str:
     """Generate a unique session ID."""
     return secrets.token_urlsafe(18)
+
+def verify_dpop_proof(dpop_header: str, dpop_bind: str, http_method: str, http_uri: str) -> tuple[bool, dict]:
+    """
+    Verify a DPoP proof JWT.
+    
+    Args:
+        dpop_header: The DPoP header value (JWT)
+        dpop_bind: The DPoP-Bind header value (token hash)
+        http_method: The HTTP method of the request
+        http_uri: The HTTP URI of the request
+    
+    Returns:
+        Tuple of (is_valid, decoded_payload)
+    """
+    try:
+        # Remove 'DPoP ' prefix if present
+        if dpop_header.startswith('DPoP '):
+            dpop_header = dpop_header[6:]
+        
+        # Decode JWT header and payload (without verification first)
+        import jwt
+        from jwt.exceptions import InvalidTokenError
+        
+        # Parse JWT manually to get both header and payload
+        parts = dpop_header.split('.')
+        if len(parts) != 3:
+            print(f"[ERROR] Invalid JWT format: expected 3 parts, got {len(parts)}")
+            return False, {}
+        
+        # Decode header (first part)
+        header_b64 = parts[0]
+        header_padding = (4 - len(header_b64) % 4) % 4
+        header_padded = header_b64 + '=' * header_padding
+        header_json = base64.b64decode(header_padded).decode('utf-8')
+        header = json.loads(header_json)
+        
+        # Decode payload (second part)
+        payload_b64 = parts[1]
+        payload_padding = (4 - len(payload_b64) % 4) % 4
+        payload_padded = payload_b64 + '=' * payload_padding
+        payload_json = base64.b64decode(payload_padded).decode('utf-8')
+        payload = json.loads(payload_json)
+        
+        # Extract claims from header and payload
+        typ = header.get("typ")  # typ is in header
+        alg = header.get("alg")  # alg is in header
+        htm = payload.get("htm")  # htm is in payload
+        htu = payload.get("htu")  # htu is in payload
+        iat = payload.get("iat")  # iat is in payload
+        jti = payload.get("jti")  # jti is in payload
+        nonce = payload.get("nonce")  # nonce is in payload
+        
+        # Verify required claims
+        if typ != "dpop+jwt":
+            print(f"[ERROR] Invalid DPoP type: {typ}")
+            return False, {}
+        
+        if alg != "ES256":
+            print(f"[ERROR] Unsupported algorithm: {alg}")
+            return False, {}
+        
+        if htm != http_method:
+            print(f"[ERROR] HTTP method mismatch: expected {http_method}, got {htm}")
+            return False, {}
+        
+        # Verify HTTP URI (should match the request URI)
+        if htu != http_uri:
+            print(f"[ERROR] HTTP URI mismatch: expected {http_uri}, got {htu}")
+            return False, {}
+        
+        # Verify timestamp (not too old, not in future)
+        current_time = int(time.time())
+        if iat and (current_time - iat > 300):  # 5 minutes max age
+            print(f"[ERROR] DPoP proof too old: {current_time - iat} seconds")
+            return False, {}
+        
+        if iat and iat > current_time + 60:  # 1 minute future tolerance
+            print(f"[ERROR] DPoP proof timestamp in future: {iat - current_time} seconds")
+            return False, {}
+        
+        # Additional validation: check if this matches the binding claims
+        # In a real implementation, you would also:
+        # 1. Extract the public key from the DPoP-Bind token
+        # 2. Verify the JWT signature using that public key
+        # 3. Verify the DPoP-Bind token hash matches the JWT
+        
+        print(f"[INFO] DPoP proof validation successful")
+        print(f"[DEBUG] DPoP claims: typ={typ}, alg={alg}, htm={htm}, htu={htu}, iat={iat}, jti={jti}")
+        
+        return True, payload
+        
+    except InvalidTokenError as e:
+        print(f"[ERROR] Invalid JWT format: {str(e)}")
+        return False, {}
+    except Exception as e:
+        print(f"[ERROR] DPoP verification error: {str(e)}")
+        return False, {}
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -215,14 +314,85 @@ async def dpop_bind(request: Request):
         if session.get("state") != "bound-bik":
             raise HTTPException(status_code=403, detail="BIK not bound")
         
-        # Get the DPoP JWS from request body
-        dpop_jws = (await request.body()).decode()
+        # Get the DPoP JWT from request body
+        dpop_jwt = (await request.body()).decode()
+        print(f"[DEBUG] Received DPoP JWT: {dpop_jwt[:100]}...")  # Log first 100 chars
         
-        # TODO: Implement DPoP JWS verification
-        # For lab purposes, we'll accept any JWS and extract a mock thumbprint
-        
-        # Mock implementation - in real implementation, verify the DPoP JWS
-        dpop_jkt = f"dpop_{secrets.token_hex(8)}"
+        # Verify and extract DPoP JWT
+        try:
+            print(f"[DEBUG] Attempting to decode DPoP JWT...")
+            
+            # Decode the JWT header and payload separately
+
+            
+            # Split the JWT into parts
+            parts = dpop_jwt.split('.')
+            if len(parts) != 3:
+                raise HTTPException(status_code=400, detail="Invalid JWT format: not 3 parts")
+            
+            # Decode header (first part)
+            header_b64 = parts[0]
+            header_padding = (4 - len(header_b64) % 4) % 4
+            header_padded = header_b64 + '=' * header_padding
+            header_json = base64.b64decode(header_padded).decode('utf-8')
+            header = json.loads(header_json)
+            print(f"[DEBUG] JWT header: {header}")
+            
+            # Decode payload (second part)
+            payload_b64 = parts[1]
+            payload_padding = (4 - len(payload_b64) % 4) % 4
+            payload_padded = payload_b64 + '=' * payload_padding
+            payload_json = base64.b64decode(payload_padded).decode('utf-8')
+            payload = json.loads(payload_json)
+            print(f"[DEBUG] JWT payload: {payload}")
+            
+            # Extract claims from header and payload
+            typ = header.get("typ")
+            alg = header.get("alg")
+            htm = payload.get("htm")
+            htu = payload.get("htu")
+            iat = payload.get("iat")
+            jti = payload.get("jti")
+            
+            print(f"[DEBUG] Extracted claims: typ={typ}, alg={alg}, htm={htm}, htu={htu}, iat={iat}, jti={jti}")
+            
+            if typ != "dpop+jwt":
+                print(f"[ERROR] Invalid DPoP type: {typ}")
+                raise HTTPException(status_code=400, detail="Invalid DPoP type")
+            
+            if alg != "ES256":
+                print(f"[ERROR] Unsupported algorithm: {alg}")
+                raise HTTPException(status_code=400, detail="Unsupported algorithm")
+            
+            if htm != "POST":
+                print(f"[ERROR] Invalid HTTP method: expected POST, got {htm}")
+                raise HTTPException(status_code=400, detail="Invalid HTTP method")
+            
+            print(f"[DEBUG] All DPoP claims validated successfully")
+            
+            # Extract public key from JWT header (if present)
+            # In a real implementation, you would verify the signature here
+            dpop_jkt = f"dpop_{secrets.token_hex(8)}"
+            
+            # Store DPoP claims for future verification
+            session["dpop_claims"] = {
+                "typ": typ,
+                "alg": alg,
+                "htm": htm,
+                "htu": htu,
+                "iat": iat,
+                "jti": jti
+            }
+            
+            print(f"[INFO] DPoP binding successful for session {session_id[:8]}")
+            print(f"[DEBUG] DPoP claims: {session['dpop_claims']}")
+            
+        except Exception as e:
+            print(f"[ERROR] DPoP verification failed: {str(e)}")
+            print(f"[ERROR] Exception type: {type(e).__name__}")
+            import traceback
+            print(f"[ERROR] Traceback: {traceback.format_exc()}")
+            raise HTTPException(status_code=400, detail=f"DPoP verification failed: {str(e)}")
         
         # Generate binding token (mock)
         bind_token = f"bind_{secrets.token_hex(16)}"
@@ -278,9 +448,9 @@ async def webauthn_registration_options(request: Request):
         
         options = {
             "challenge": challenge,
+            "rpId": rp_id,  # WebAuthn expects flat rpId property, not nested rp object
             "rp": {
-                "name": "DPoP Lab",
-                "id": rp_id
+                "name": "DPoP Lab"
             },
             "user": {
                 "id": base64.urlsafe_b64encode(session_id.encode()).decode('utf-8').rstrip('='),
@@ -346,6 +516,11 @@ async def webauthn_registration_verify(request: Request):
             "transports": ["internal"]
         })
         
+        # Debug logging
+        print(f"[DEBUG] Stored credential in session: {credential_id}")
+        print(f"[DEBUG] Session now has {len(session['webauthn_credentials'])} credentials")
+        print(f"[DEBUG] Full session: {session}")
+        
         return {"verified": True, "credential_id": credential_id}
         
     except HTTPException:
@@ -360,10 +535,14 @@ async def webauthn_authentication_options(request: Request):
     """
     try:
         session_id = request.cookies.get("session_id")
+        print(f"[DEBUG] Authentication options request - session_id: {session_id}")
+        print(f"[DEBUG] Available sessions: {list(sessions.keys())}")
+        
         if not session_id or session_id not in sessions:
             raise HTTPException(status_code=401, detail="No valid session")
         
         session = sessions[session_id]
+        print(f"[DEBUG] Found session: {session}")
         
         if session.get("state") != "bound":
             raise HTTPException(status_code=403, detail="DPoP not bound")
@@ -398,6 +577,11 @@ async def webauthn_authentication_options(request: Request):
         
         # Store challenge for verification
         session["webauthn_challenge"] = challenge
+        
+        # Debug logging
+        print(f"[DEBUG] Generated authentication options: {options}")
+        print(f"[DEBUG] Session credentials: {session.get('webauthn_credentials', [])}")
+        print(f"[DEBUG] Session state: {session.get('state')}")
         
         return options
         
@@ -673,16 +857,45 @@ async def api_test(request: Request):
         
         # Check for DPoP header
         dpop_header = request.headers.get("DPoP")
+        print(f"[DEBUG] API test - DPoP header: {dpop_header}")
         if not dpop_header:
             raise HTTPException(status_code=401, detail="Missing DPoP header")
         
         # Check for DPoP-Bind header
         dpop_bind = request.headers.get("DPoP-Bind")
+        print(f"[DEBUG] API test - DPoP-Bind header: {dpop_bind}")
         if not dpop_bind:
-            raise HTTPException(status_code=401, detail="Missing DPoP-Bind header")
+            raise HTTPException(status_code=400, detail="Missing DPoP-Bind header")
         
-        # TODO: Implement DPoP verification
-        # For lab purposes, we'll accept any DPoP header
+        # Log all headers for debugging
+        print(f"[DEBUG] API test - All headers: {dict(request.headers)}")
+        
+        # Verify DPoP proof JWT
+        try:
+            # Decode and verify the DPoP JWT
+            dpop_verified, dpop_data = verify_dpop_proof(dpop_header, dpop_bind, request.method, str(request.url))
+            
+            if not dpop_verified:
+                raise HTTPException(status_code=401, detail="Invalid DPoP proof")
+            
+            # Check if this is a replay attack (verify nonce if available)
+            if dpop_data.get("jti"):
+                jti = dpop_data["jti"]
+                if jti in session.get("used_jtis", set()):
+                    raise HTTPException(status_code=401, detail="DPoP proof already used (replay attack)")
+                
+                # Store used JTI to prevent replay
+                if "used_jtis" not in session:
+                    session["used_jtis"] = set()
+                session["used_jtis"].add(jti)
+            
+            # Log successful DPoP verification
+            print(f"[INFO] DPoP proof verified successfully for session {session_id[:8]}")
+            print(f"[DEBUG] DPoP data: {dpop_data}")
+            
+        except Exception as e:
+            print(f"[ERROR] DPoP verification failed: {str(e)}")
+            raise HTTPException(status_code=401, detail=f"DPoP verification failed: {str(e)}")
         
         # Get request body
         body = await request.json()

@@ -278,7 +278,8 @@ class DPoPUtils {
 
 class WebAuthnUtils {
     static isSupported() {
-        return window.PublicKeyCredential !== undefined;
+        return window.PublicKeyCredential && 
+            typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function';
     }
 
     static async createCredentials(options) {
@@ -533,7 +534,11 @@ class APIUtils {
             credentials: 'include'
         };
         
+        // Properly merge headers to avoid overwriting
         const finalOptions = { ...defaultOptions, ...options };
+        if (options.headers) {
+            finalOptions.headers = { ...defaultOptions.headers, ...options.headers };
+        }
         
         try {
             const response = await fetch(url, finalOptions);
@@ -667,6 +672,73 @@ class URLUtils {
 }
 
 // ============================================================================
+// Polling Utilities
+// ============================================================================
+
+class PollingUtils {
+    /**
+     * Generic polling utility that checks a status endpoint until a condition is met
+     * @param {string} statusEndpoint - API endpoint to check (e.g., '/link/status/{id}')
+     * @param {Function} checkCondition - Function that returns true when polling should stop
+     * @param {Object} options - Polling options
+     * @param {number} options.maxAttempts - Maximum number of attempts (default: 60)
+     * @param {number} options.interval - Polling interval in milliseconds (default: 5000)
+     * @param {Function} options.onAttempt - Callback for each attempt
+     * @param {Function} options.onSuccess - Callback when condition is met
+     * @param {Function} options.onTimeout - Callback when max attempts reached
+     * @param {Function} options.onError - Callback for errors
+     * @returns {Promise} Resolves when condition is met or rejects on timeout/error
+     */
+    static async pollForStatus(statusEndpoint, checkCondition, options = {}) {
+        const {
+            maxAttempts = 60,
+            interval = 5000,
+            onAttempt = () => {},
+            onSuccess = () => {},
+            onTimeout = () => {},
+            onError = () => {}
+        } = options;
+        
+        let attempts = 0;
+        
+        const poll = async () => {
+            try {
+                attempts++;
+                onAttempt(attempts, maxAttempts);
+                
+                const response = await APIUtils.get(statusEndpoint);
+                
+                if (checkCondition(response)) {
+                    onSuccess(response);
+                    return response;
+                }
+                
+                if (attempts >= maxAttempts) {
+                    onTimeout();
+                    throw new Error(`Polling timed out after ${maxAttempts} attempts`);
+                }
+                
+                // Continue polling
+                setTimeout(poll, interval);
+                
+            } catch (error) {
+                onError(error, attempts, maxAttempts);
+                
+                if (attempts >= maxAttempts) {
+                    throw error;
+                } else {
+                    // Retry after interval
+                    setTimeout(poll, interval);
+                }
+            }
+        };
+        
+        // Start polling
+        return poll();
+    }
+}
+
+// ============================================================================
 // Constants
 // ============================================================================
 
@@ -693,6 +765,7 @@ export {
     QRCodeUtils,
     URLUtils,
     APIUtils,
+    PollingUtils,
     STORAGE_KEYS
 };
 
