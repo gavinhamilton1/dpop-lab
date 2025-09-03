@@ -453,7 +453,29 @@ class QRCodeUtils {
                 // Display the link text underneath the QR code
                 const linkTextElement = document.getElementById('qrLinkText');
                 if (linkTextElement) {
-                    const textToDisplay = displayText || linkUrl.trim();
+                    // Ensure displayText has proxy prefix for local URLs
+                    let textToDisplay = displayText || linkUrl.trim();
+                    
+                    // If displayText is a local URL (doesn't start with http), add proxy prefix
+                    if (displayText && !displayText.startsWith('http')) {
+                        const pathname = window.location.pathname;
+                        if (pathname.includes('/proxy/')) {
+                            const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+                            if (proxyMatch) {
+                                const proxyPrefix = proxyMatch[1];
+                                textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
+                                console.log('[QRCodeUtils] Added proxy prefix to displayText:', { original: displayText, withProxy: textToDisplay });
+                            }
+                        } else if (pathname.includes('/lab/')) {
+                            const labMatch = pathname.match(/^(\/lab\/)/);
+                            if (labMatch) {
+                                const labPrefix = labMatch[1];
+                                textToDisplay = `${window.location.origin}${labPrefix}${displayText}`;
+                                console.log('[QRCodeUtils] Added lab prefix to displayText:', { original: displayText, withLab: textToDisplay });
+                            }
+                        }
+                    }
+                    
                     console.log('[QRCodeUtils] Display text being set (toCanvas):', { displayText, linkUrl, textToDisplay });
                     console.log('[QRCodeUtils] Using displayText:', displayText ? 'YES' : 'NO', 'displayText value:', displayText);
                     linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
@@ -486,7 +508,29 @@ class QRCodeUtils {
                 // Display the link text underneath the QR code
                 const linkTextElement = document.getElementById('qrLinkText');
                 if (linkTextElement) {
-                    const textToDisplay = displayText || linkUrl.trim();
+                    // Ensure displayText has proxy prefix for local URLs
+                    let textToDisplay = displayText || linkUrl.trim();
+                    
+                    // If displayText is a local URL (doesn't start with http), add proxy prefix
+                    if (displayText && !displayText.startsWith('http')) {
+                        const pathname = window.location.pathname;
+                        if (pathname.includes('/proxy/')) {
+                            const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+                            if (proxyMatch) {
+                                const proxyPrefix = proxyMatch[1];
+                                textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
+                                console.log('[QRCodeUtils] Added proxy prefix to displayText (toDataURL):', { original: displayText, withProxy: textToDisplay });
+                            }
+                        } else if (pathname.includes('/lab/')) {
+                            const labMatch = pathname.match(/^(\/lab\/)/);
+                            if (labMatch) {
+                                const labPrefix = labMatch[1];
+                                textToDisplay = `${window.location.origin}${labPrefix}${displayText}`;
+                                console.log('[QRCodeUtils] Added lab prefix to displayText (toDataURL):', { original: displayText, withLab: textToDisplay });
+                            }
+                        }
+                    }
+                    
                     console.log('[QRCodeUtils] Display text being set (toDataURL):', { displayText, linkUrl, textToDisplay });
                     linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                 }
@@ -499,7 +543,29 @@ class QRCodeUtils {
                     // Display the link text underneath the QR code
                     const linkTextElement = document.getElementById('qrLinkText');
                     if (linkTextElement) {
-                        const textToDisplay = displayText || linkUrl.trim();
+                        // Ensure displayText has proxy prefix for local URLs
+                        let textToDisplay = displayText || linkUrl.trim();
+                        
+                        // If displayText is a local URL (doesn't start with http), add proxy prefix
+                        if (displayText && !displayText.startsWith('http')) {
+                            const pathname = window.location.pathname;
+                            if (pathname.includes('/proxy/')) {
+                                const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+                                if (proxyMatch) {
+                                    const proxyPrefix = proxyMatch[1];
+                                    textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
+                                    console.log('[QRCodeUtils] Added proxy prefix to displayText (constructor):', { original: displayText, withProxy: textToDisplay });
+                                }
+                            } else if (pathname.includes('/lab/')) {
+                                const labMatch = pathname.match(/^(\/lab\/)/);
+                                if (labMatch) {
+                                    const labPrefix = labMatch[1];
+                                    textToDisplay = `${window.location.origin}${labPrefix}${displayText}`;
+                                    console.log('[QRCodeUtils] Added lab prefix to displayText (constructor):', { original: displayText, withLab: textToDisplay });
+                                }
+                            }
+                        }
+                        
                         console.log('[QRCodeUtils] Display text being set (constructor):', { displayText, linkUrl, textToDisplay });
                         linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                     }
@@ -519,7 +585,29 @@ class QRCodeUtils {
                     // Also display link text for fallback
                     const linkTextElement = document.getElementById('qrLinkText');
                     if (linkTextElement) {
-                        const textToDisplay = displayText || linkUrl.trim();
+                        // Ensure displayText has proxy prefix for local URLs
+                        let textToDisplay = displayText || linkUrl.trim();
+                        
+                        // If displayText is a local URL (doesn't start with http), add proxy prefix
+                        if (displayText && !displayText.startsWith('http')) {
+                            const pathname = window.location.pathname;
+                            if (pathname.includes('/proxy/')) {
+                                const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+                                if (proxyMatch) {
+                                    const proxyPrefix = proxyMatch[1];
+                                    textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
+                                    console.log('[QRCodeUtils] Added proxy prefix to displayText (fallback):', { original: displayText, withProxy: textToDisplay });
+                                }
+                            } else if (pathname.includes('/lab/')) {
+                                const labMatch = pathname.match(/^(\/lab\/)/);
+                                if (labMatch) {
+                                    const labPrefix = labMatch[1];
+                                    textToDisplay = `${window.location.origin}${labPrefix}${displayText}`;
+                                    console.log('[QRCodeUtils] Added lab prefix to displayText (fallback):', { original: displayText, withLab: textToDisplay });
+                                }
+                            }
+                        }
+                        
                         console.log('[QRCodeUtils] Display text being set (fallback):', { displayText, linkUrl, textToDisplay });
                         linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                     }
@@ -688,11 +776,12 @@ class URLUtils {
     }
     
     static getDPoPURI(endpoint) {
-        // For DPoP proofs, return the server-side URI without proxy prefix
+        // For DPoP proofs, return the full URL without proxy prefix
         // This ensures the htu claim matches what the server expects
         const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-        console.log('[URLUtils] getDPoPURI:', { endpoint, cleanEndpoint, note: 'No proxy prefix for DPoP htu' });
-        return cleanEndpoint;
+        const fullUrl = `${window.location.origin}${cleanEndpoint}`;
+        console.log('[URLUtils] getDPoPURI:', { endpoint, cleanEndpoint, fullUrl, note: 'Full URL without proxy prefix for DPoP htu' });
+        return fullUrl;
     }
 }
 

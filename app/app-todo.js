@@ -169,7 +169,7 @@ class DPoPLab {
             // TODO: Step 3.2 - Create DPoP proof for API request
             // Hint: Create JWT with header (typ: 'dpop+jwt', alg: 'ES256', jwk: publicJwk)
             // and payload (htm: 'POST', htu: URLUtils.getDPoPURI('api/test'), iat: timestamp, jti: uniqueId)
-            // Note: Use URLUtils.getDPoPURI() to get server-side path without proxy prefix
+            // Note: Use URLUtils.getDPoPURI() to get full URL without proxy prefix (e.g., https://lab-server.com/api/test)
             // Use JWTUtils.createJWT(header, payload, privateKey) to sign
             
             // TODO: Step 3.3 - Send API request with DPoP proof
