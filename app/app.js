@@ -587,9 +587,15 @@ class DPoPLab {
             
             // Step 5.3 - Generate QR code with internet service registration endpoint
             this.log('[INFO] Generating QR code for mobile device...');
-            this.log('[DEBUG] InternetServiceUtils.BASE_URL:', InternetServiceUtils.BASE_URL);
+            this.log('[DEBUG] InternetServiceUtils loaded:', typeof InternetServiceUtils);
+            this.log('[DEBUG] InternetServiceUtils.BASE_URL:', InternetServiceUtils?.BASE_URL);
             this.log('[DEBUG] response.link_id:', response.link_id);
-            const internetLinkUrl = `${InternetServiceUtils.BASE_URL}/reg-link/${response.link_id}`;
+            
+            // Force the correct BASE_URL if it's wrong
+            const baseUrl = InternetServiceUtils?.BASE_URL || 'https://dpop.fun';
+            this.log('[DEBUG] Using baseUrl:', baseUrl);
+            
+            const internetLinkUrl = `${baseUrl}/reg-link/${response.link_id}`;
             this.log('[DEBUG] Constructed internetLinkUrl:', internetLinkUrl);
             await QRCodeUtils.generateQRCode(internetLinkUrl, 'qrCode', 200, 'M', response.link_url);
             this.log('[INFO] QR code generated successfully with registration URL:', internetLinkUrl);
@@ -624,9 +630,9 @@ class DPoPLab {
     // ============================================================================
 
     async pollForLinkCompletion(linkId) {
-        // Use the generic polling utility to check both local and internet services
+        // Use the custom polling utility to check both local and internet services
         try {
-            await PollingUtils.pollForStatus(
+            await PollingUtils.pollForCustomStatus(
                 // Check both local and internet services
                 async () => {
                     // Check local service first

@@ -797,6 +797,61 @@ class PollingUtils {
         // Start polling
         return poll();
     }
+    
+    /**
+     * Custom polling utility for complex status checking (like our link completion logic)
+     * @param {Function} checkFunction - Function that performs the status check and returns result
+     * @param {Function} checkCondition - Function that returns true when polling should stop
+     * @param {Object} options - Polling options
+     * @returns {Promise} Resolves when condition is met or rejects on timeout/error
+     */
+    static async pollForCustomStatus(checkFunction, checkCondition, options = {}) {
+        const {
+            maxAttempts = 60,
+            interval = 5000,
+            onAttempt = () => {},
+            onSuccess = () => {},
+            onTimeout = () => {},
+            onError = () => {}
+        } = options;
+        
+        let attempts = 0;
+        
+        const poll = async () => {
+            try {
+                attempts++;
+                onAttempt(attempts, maxAttempts);
+                
+                const result = await checkFunction();
+                
+                if (checkCondition(result)) {
+                    onSuccess(result);
+                    return result;
+                }
+                
+                if (attempts >= maxAttempts) {
+                    onTimeout();
+                    throw new Error(`Polling timed out after ${maxAttempts} attempts`);
+                }
+                
+                // Continue polling
+                setTimeout(poll, interval);
+                
+            } catch (error) {
+                onError(error, attempts, maxAttempts);
+                
+                if (attempts >= maxAttempts) {
+                    throw error;
+                } else {
+                    // Retry after interval
+                    setTimeout(poll, interval);
+                }
+            }
+        };
+        
+        // Start polling
+        return poll();
+    }
 }
 
 // ============================================================================
