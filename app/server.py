@@ -13,8 +13,12 @@ import json
 import base64
 import time
 import logging
+import re
 from typing import Dict, Any
 import os
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="DPoP Lab Server", version="1.0.0")
 
@@ -43,10 +47,6 @@ LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 if PROXY_PREFIX:
     logger.info(f"Configured with proxy prefix: {PROXY_PREFIX}")
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-logger.info("DPoP Lab Server started")
-logger.info(f"Serving files from {BASE_DIR}")
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory=BASE_DIR), name="static")
@@ -453,9 +453,30 @@ async def link_start(request: Request):
             "device_info": {}
         }
         
-        # Generate linking URL
+        # Generate linking URL with proxy path support
         base_url = str(request.base_url).rstrip('/')
-        link_url = f"{base_url}/link/{link_id}"
+        
+        # Check if we're behind a proxy and include the path
+        proxy_path = ""
+        if hasattr(request, 'scope') and 'path' in request.scope:
+            path = request.scope['path']
+            # Check for common proxy patterns
+            if '/proxy/' in path:
+                proxy_match = re.match(r'^(\/proxy\/\d+\/)', path)
+                if proxy_match:
+                    proxy_path = proxy_match.group(1)
+            elif '/lab/' in path:
+                lab_match = re.match(r'^(\/lab\/)', path)
+                if lab_match:
+                    proxy_path = lab_match.group(1)
+        
+        # Construct the full URL with proxy path if present
+        if proxy_path:
+            # Remove the proxy path from base_url to avoid duplication
+            clean_base = base_url.replace(proxy_path, '')
+            link_url = f"{clean_base}{proxy_path}link/{link_id}"
+        else:
+            link_url = f"{base_url}/link/{link_id}"
         
         return {
             "link_id": link_id,
@@ -515,7 +536,23 @@ async def link_page(link_id: str):
                     statusDiv.innerHTML = '<p>Completing link...</p>';
                     
                     // Send device info to complete the link
-                    const response = await fetch('/link/complete/{link_id}', {{
+                    // Detect proxy path dynamically
+                    let proxyPath = '';
+                    const pathname = window.location.pathname;
+                    if (pathname.includes('/proxy/')) {{
+                        const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+                        if (proxyMatch) {{
+                            proxyPath = proxyMatch[1];
+                        }}
+                    }} else if (pathname.includes('/lab/')) {{
+                        const labMatch = pathname.match(/^(\/lab\/)/);
+                        if (labMatch) {{
+                            proxyPath = labMatch[1];
+                        }}
+                    }}
+                    
+                    const completeUrl = proxyPath ? `${{proxyPath}}link/complete/{link_id}` : `/link/complete/{link_id}`;
+                    const response = await fetch(completeUrl, {{
                         method: 'POST',
                         headers: {{
                             'Content-Type': 'application/json'
