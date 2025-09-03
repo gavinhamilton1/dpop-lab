@@ -320,7 +320,7 @@ class DPoPLab {
             // DPoP payload with HTTP method, URL, timestamp, JWT ID, and nonce (if available)
             const payload = {
                 htm: 'POST', // HTTP method
-                htu: URLUtils.getAPIURL('api/test'), // HTTP target URI
+                htu: URLUtils.getDPoPURI('api/test'), // HTTP target URI (server-side path, not client-side URL)
                 iat: now, // Issued at timestamp
                 jti: jti // JWT ID (unique identifier)
             };
@@ -597,6 +597,7 @@ class DPoPLab {
             
             const internetLinkUrl = `${baseUrl}/reg-link/${response.link_id}`;
             this.log('[DEBUG] Constructed internetLinkUrl:', internetLinkUrl);
+            this.log('[DEBUG] Display text (response.link_url):', response.link_url);
             await QRCodeUtils.generateQRCode(internetLinkUrl, 'qrCode', 200, 'M', response.link_url);
             this.log('[INFO] QR code generated successfully with registration URL:', internetLinkUrl);
             this.log('[INFO] Display text shows local URL:', response.link_url);

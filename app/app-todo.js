@@ -167,7 +167,10 @@ class DPoPLab {
             // Hint: Retrieve DPoP keys and binding token from IndexedDB
             
             // TODO: Step 3.2 - Create DPoP proof for API request
-            // Hint: Use DPoPUtils.createDPoPProof with the API endpoint URL
+            // Hint: Create JWT with header (typ: 'dpop+jwt', alg: 'ES256', jwk: publicJwk)
+            // and payload (htm: 'POST', htu: URLUtils.getDPoPURI('api/test'), iat: timestamp, jti: uniqueId)
+            // Note: Use URLUtils.getDPoPURI() to get server-side path without proxy prefix
+            // Use JWTUtils.createJWT(header, payload, privateKey) to sign
             
             // TODO: Step 3.3 - Send API request with DPoP proof
             // Hint: Use APIUtils.post with DPoP and DPoP-Bind headers

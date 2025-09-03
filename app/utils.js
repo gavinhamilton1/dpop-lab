@@ -377,6 +377,8 @@ class WebAuthnUtils {
 
 class QRCodeUtils {
     static async generateQRCode(text, elementId, size = 200, errorCorrection = 'M', displayText = null) {
+        console.log('[QRCodeUtils] generateQRCode called with:', { text, elementId, size, errorCorrection, displayText });
+        
         if (!text || !text.trim()) {
             throw new Error('Text input is required');
         }
@@ -453,6 +455,7 @@ class QRCodeUtils {
                 if (linkTextElement) {
                     const textToDisplay = displayText || linkUrl.trim();
                     console.log('[QRCodeUtils] Display text being set (toCanvas):', { displayText, linkUrl, textToDisplay });
+                    console.log('[QRCodeUtils] Using displayText:', displayText ? 'YES' : 'NO', 'displayText value:', displayText);
                     linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                 }
             } else if (typeof QRCode.toDataURL === 'function') {
@@ -682,6 +685,14 @@ class URLUtils {
         }
         
         return `/${cleanPath}`;
+    }
+    
+    static getDPoPURI(endpoint) {
+        // For DPoP proofs, return the server-side URI without proxy prefix
+        // This ensures the htu claim matches what the server expects
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        console.log('[URLUtils] getDPoPURI:', { endpoint, cleanEndpoint, note: 'No proxy prefix for DPoP htu' });
+        return cleanEndpoint;
     }
 }
 
