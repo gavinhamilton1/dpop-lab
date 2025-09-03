@@ -455,12 +455,6 @@ class DPoPLab {
                 allow_credentials_count: options.allowCredentials?.length || 0 // Number of allowed credential IDs
             });
             
-            // Debug: Log the raw options to see what the server is actually sending
-            this.log('[DEBUG] Raw authentication options from server:', options);
-            
-            // Step 4.7 - Get credentials with navigator.credentials.get()
-            this.log('[INFO] Getting WebAuthn assertion...');
-                        
             // Convert base64 challenge to ArrayBuffer (required by WebAuthn API)
             const webauthnOptions = { ...options };
                         
@@ -505,15 +499,12 @@ class DPoPLab {
             
             // Get the WebAuthn assertion using the browser's native API - this will trigger the biometric challenge to the user
             this.log('[INFO] Calling navigator.credentials.get()...');
-            this.log('[DEBUG] WebAuthn options being passed:', webauthnOptions);
             
             let assertion;
             try {
                 assertion = await navigator.credentials.get({
                     publicKey: webauthnOptions
                 });
-                
-                this.log('[DEBUG] Raw assertion object received:', assertion);
                 
                 // Validate the assertion was created successfully
                 if (!assertion) {
@@ -589,20 +580,11 @@ class DPoPLab {
             
             // Step 5.3 - Generate QR code with internet service registration endpoint
             this.log('[INFO] Generating QR code for mobile device...');
-            this.log('[DEBUG] InternetServiceUtils loaded:', typeof InternetServiceUtils);
-            this.log('[DEBUG] InternetServiceUtils.BASE_URL:', InternetServiceUtils?.BASE_URL);
-            this.log('[DEBUG] response.link_id:', response.link_id);
-            
             // Force the correct BASE_URL if it's wrong
             const baseUrl = InternetServiceUtils?.BASE_URL || 'https://dpop.fun';
-            this.log('[DEBUG] Using baseUrl:', baseUrl);
             
             const internetLinkUrl = `${baseUrl}/reg-link/${response.link_id}`;
-            this.log('[DEBUG] Constructed internetLinkUrl:', internetLinkUrl);
-            this.log('[DEBUG] Display text (response.link_url):', response.link_url);
             await QRCodeUtils.generateQRCode(internetLinkUrl, 'qrCode', 200, 'M', response.link_url);
-            this.log('[INFO] QR code generated successfully with registration URL:', internetLinkUrl);
-            this.log('[INFO] Display text shows local URL:', response.link_url);
             
             // Step 5.4 - Show QR container and manual completion button
             document.getElementById('qrContainer').style.display = 'block';
