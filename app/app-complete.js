@@ -579,7 +579,8 @@ class DPoPLab {
             const response = await APIUtils.post('/link/start');
             this.log('[INFO] Link initiated', { 
                 link_id: response.link_id,
-                link_url_length: response.link_url?.length || 0 
+                link_url_length: response.link_url?.length || 0,
+                link_url: response.link_url
             });
             
             // Step 5.2 - Link initiated, waiting for mobile device to register
@@ -597,6 +598,7 @@ class DPoPLab {
             
             const internetLinkUrl = `${baseUrl}/reg-link/${response.link_id}`;
             this.log('[DEBUG] Constructed internetLinkUrl:', internetLinkUrl);
+            this.log('[DEBUG] Display text (response.link_url):', response.link_url);
             await QRCodeUtils.generateQRCode(internetLinkUrl, 'qrCode', 200, 'M', response.link_url);
             this.log('[INFO] QR code generated successfully with registration URL:', internetLinkUrl);
             this.log('[INFO] Display text shows local URL:', response.link_url);

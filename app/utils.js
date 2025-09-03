@@ -391,26 +391,32 @@ class QRCodeUtils {
             throw new Error('QRCode library not loaded. Please ensure qrcode.min.js is loaded before utils.js');
         }
 
-        // Fix proxy path in link URL if needed
+        // Fix proxy path in link URL if needed (only for local URLs, not external URLs)
         let linkUrl = text;
         const pathname = window.location.pathname;
-        if (pathname.includes('/proxy/')) {
-            const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
-            if (proxyMatch) {
-                const proxyPrefix = proxyMatch[1];
-                // Remove the proxy prefix from the server's link_url and add it back
-                const cleanUrl = linkUrl.replace(/^https?:\/\/[^\/]+/, '');
-                linkUrl = `${window.location.origin}${proxyPrefix}${cleanUrl}`;
-                console.log('[QRCodeUtils] Fixed proxy path in link URL:', { original: text, fixed: linkUrl });
+        
+        // Only apply proxy path fixing to local URLs (not external URLs like dpop.fun)
+        if (!text.startsWith('http') || text.includes(window.location.hostname)) {
+            if (pathname.includes('/proxy/')) {
+                const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+                if (proxyMatch) {
+                    const proxyPrefix = proxyMatch[1];
+                    // Remove the proxy prefix from the server's link_url and add it back
+                    const cleanUrl = linkUrl.replace(/^https?:\/\/[^\/]+/, '');
+                    linkUrl = `${window.location.origin}${proxyPrefix}${cleanUrl}`;
+                    console.log('[QRCodeUtils] Fixed proxy path in local link URL:', { original: text, fixed: linkUrl });
+                }
+            } else if (pathname.includes('/lab/')) {
+                const labMatch = pathname.match(/^(\/lab\/)/);
+                if (labMatch) {
+                    const labPrefix = labMatch[1];
+                    const cleanUrl = linkUrl.replace(/^https?:\/\/[^\/]+/, '');
+                    linkUrl = `${window.location.origin}${labPrefix}${cleanUrl}`;
+                    console.log('[QRCodeUtils] Fixed lab path in local link URL:', { original: text, fixed: linkUrl });
+                }
             }
-        } else if (pathname.includes('/lab/')) {
-            const labMatch = pathname.match(/^(\/lab\/)/);
-            if (labMatch) {
-                const labPrefix = labMatch[1];
-                const cleanUrl = linkUrl.replace(/^https?:\/\/[^\/]+/, '');
-                linkUrl = `${window.location.origin}${labPrefix}${cleanUrl}`;
-                console.log('[QRCodeUtils] Fixed lab path in link URL:', { original: text, fixed: linkUrl });
-            }
+        } else {
+            console.log('[QRCodeUtils] External URL detected, skipping proxy path fixing:', text);
         }
 
         try {
@@ -446,6 +452,7 @@ class QRCodeUtils {
                 const linkTextElement = document.getElementById('qrLinkText');
                 if (linkTextElement) {
                     const textToDisplay = displayText || linkUrl.trim();
+                    console.log('[QRCodeUtils] Display text being set (toCanvas):', { displayText, linkUrl, textToDisplay });
                     linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                 }
             } else if (typeof QRCode.toDataURL === 'function') {
@@ -477,6 +484,7 @@ class QRCodeUtils {
                 const linkTextElement = document.getElementById('qrLinkText');
                 if (linkTextElement) {
                     const textToDisplay = displayText || linkUrl.trim();
+                    console.log('[QRCodeUtils] Display text being set (toDataURL):', { displayText, linkUrl, textToDisplay });
                     linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                 }
             } else if (typeof QRCode === 'function') {
@@ -489,6 +497,7 @@ class QRCodeUtils {
                     const linkTextElement = document.getElementById('qrLinkText');
                     if (linkTextElement) {
                         const textToDisplay = displayText || linkUrl.trim();
+                        console.log('[QRCodeUtils] Display text being set (constructor):', { displayText, linkUrl, textToDisplay });
                         linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                     }
                     
@@ -508,6 +517,7 @@ class QRCodeUtils {
                     const linkTextElement = document.getElementById('qrLinkText');
                     if (linkTextElement) {
                         const textToDisplay = displayText || linkUrl.trim();
+                        console.log('[QRCodeUtils] Display text being set (fallback):', { displayText, linkUrl, textToDisplay });
                         linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                     }
                     
