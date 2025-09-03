@@ -468,130 +468,121 @@ async registerPasskey() {
 The `authenticatePasskey()` method contains TODO comments. Here's the complete implementation:
 
 ```javascript
-async authenticatePasskey() {
-    this.setLoading('authBtn', 'Authenticating...');
-    
-    try {
-        this.log('[INFO] Starting passkey authentication...');
+    async authenticatePasskey() {
+        this.setLoading('authBtn', 'Authenticating...');
         
-        // Step 4.6 - Get authentication options from server
-        this.log('[INFO] Requesting authentication options from server...');
-        const options = await APIUtils.post('/webauthn/authentication/options');
-        this.log('[INFO] Authentication options received', { 
-            challenge_length: options.challenge?.length || 0, // Cryptographic challenge from server (base64)
-            rp_id: options.rpId, // Relying Party ID (domain name)
-            allow_credentials_count: options.allowCredentials?.length || 0 // Number of allowed credential IDs
-        });
-        
-        // Debug: Log the raw options to see what the server is actually sending
-        this.log('[DEBUG] Raw authentication options from server:', options);
-        
-        // Step 4.7 - Get credentials with navigator.credentials.get()
-        this.log('[INFO] Getting WebAuthn assertion...');
-                    
-        // Convert base64 challenge to ArrayBuffer (required by WebAuthn API)
-        const webauthnOptions = { ...options };
-                    
-        if (webauthnOptions.challenge) {
-            webauthnOptions.challenge = CryptoUtils.base64UrlToArrayBuffer(webauthnOptions.challenge);
-            this.log('[INFO] Converted challenge to ArrayBuffer', { 
-                original_length: options.challenge.length,
-                buffer_size: webauthnOptions.challenge.byteLength 
-            });
-        }
-        
-        // Convert credential IDs from base64 to ArrayBuffer (required by WebAuthn API)
-        if (webauthnOptions.allowCredentials) {
-            // Log the raw credential data from server to show students the structure
-            this.log('[INFO] Raw credentials from server:', webauthnOptions.allowCredentials);
-            
-            // Log each credential's properties for debug and demonstration purposes
-            //Credentials are a server record of the passkey, they are not the passkey itself. credential -> challenge -> passkey -> signed message -> server -> verified!
-            webauthnOptions.allowCredentials.forEach((cred, index) => {
-                this.log(`[INFO] Credential ${index + 1} properties:`, {
-                    type: cred.type, // Always 'public-key' for WebAuthn - identifies this as a WebAuthn credential (not a password or other auth method)
-                    id: cred.id, // Base64 credential ID - unique identifier for this specific passkey, used to find the right credential during authentication
-                    id_length: cred.id?.length || 0, // Base64 credential ID length - used to verify that the credential ID is the same as the one sent to the server
-                    transports: cred.transports, // Array of transport methods - tells browser how to communicate with the authenticator: 'internal'=built-in sensor, 'usb'=USB security key, 'nfc'=near-field, 'ble'=Bluetooth
-                    alg: cred.alg, // Algorithm identifier - cryptographic algorithm used: -7=ES256 (ECDSA with SHA-256), -257=RS256 (RSA with SHA-256), -37=PS256 (RSA-PSS with SHA-256)
-                    userHandle: cred.userHandle, // Optional user identifier (base64) - links credential to specific user account, useful when multiple users share same device
-                    signCount: cred.signCount, // Optional signature counter for replay protection - increases with each use, server checks it's higher than last seen value to prevent replay attacks
-                    backupEligible: cred.backupEligible, // Whether credential can be backed up - true if passkey can be synced to other devices (iCloud Keychain, Google Password Manager, etc.)
-                    backupState: cred.backupState, // Current backup status: 'not-backed-up'=only on this device, 'backed-up'=synced to cloud, 'backup-eligible'=can be backed up but hasn't been yet
-                    clientExtensionResults: cred.clientExtensionResults // Any extension results - additional data from WebAuthn extensions, usually empty {} but can contain app-specific metadata
-                });
-            });
-            
-            webauthnOptions.allowCredentials = webauthnOptions.allowCredentials.map(cred => ({
-                ...cred, // copy all existing credential properties (type, transports, alg, userHandle, etc.)
-                id: CryptoUtils.base64UrlToArrayBuffer(cred.id) // Override the ID with converted ArrayBuffer
-            }));
-            this.log('[INFO] Converted credential IDs to ArrayBuffers', { 
-                count: webauthnOptions.allowCredentials.length 
-            });
-        }
-        
-        // Get the WebAuthn assertion using the browser's native API - this will trigger the biometric challenge to the user
-        this.log('[INFO] Calling navigator.credentials.get()...');
-        this.log('[DEBUG] WebAuthn options being passed:', webauthnOptions);
-        
-        let assertion;
         try {
-            assertion = await navigator.credentials.get({
-                publicKey: webauthnOptions
+            this.log('[INFO] Starting passkey authentication...');
+            
+            // Step 4.6 - Get authentication options from server
+            this.log('[INFO] Requesting authentication options from server...');
+            const options = await APIUtils.post('/webauthn/authentication/options');
+            this.log('[INFO] Authentication options received', { 
+                challenge_length: options.challenge?.length || 0, // Cryptographic challenge from server (base64)
+                rp_id: options.rpId, // Relying Party ID (domain name)
+                allow_credentials_count: options.allowCredentials?.length || 0 // Number of allowed credential IDs
             });
             
-            this.log('[DEBUG] Raw assertion object received:', assertion);
-            
-            // Validate the assertion was created successfully
-            if (!assertion) {
-                throw new Error('No assertion received from WebAuthn API');
+            // Convert base64 challenge to ArrayBuffer (required by WebAuthn API)
+            const webauthnOptions = { ...options };
+                        
+            if (webauthnOptions.challenge) {
+                webauthnOptions.challenge = CryptoUtils.base64UrlToArrayBuffer(webauthnOptions.challenge);
+                this.log('[INFO] Converted challenge to ArrayBuffer', { 
+                    original_length: options.challenge.length,
+                    buffer_size: webauthnOptions.challenge.byteLength 
+                });
             }
             
-            if (!assertion.id || !assertion.response?.signature) {
-                throw new Error('Invalid assertion structure - missing required fields');
+            // Convert credential IDs from base64 to ArrayBuffer (required by WebAuthn API)
+            if (webauthnOptions.allowCredentials) {
+                // Log the raw credential data from server to show students the structure
+                this.log('[INFO] Raw credentials from server:', webauthnOptions.allowCredentials);
+                
+                // Log each credential's properties for debug and demonstration purposes
+                //Credentials are a server record of the passkey, they are not the passkey itself.  credential -> challenge -> passkey -> signed message -> server -> verified!
+                webauthnOptions.allowCredentials.forEach((cred, index) => {
+                    this.log(`[INFO] Credential ${index + 1} properties:`, {
+                        type: cred.type, // Always 'public-key' for WebAuthn - identifies this as a WebAuthn credential (not a password or other auth method)
+                        id: cred.id, // Base64 credential ID - unique identifier for this specific passkey, used to find the right credential during authentication
+                        id_length: cred.id?.length || 0, // Base64 credential ID length - used to verify that the credential ID is the same as the one sent to the server
+                        transports: cred.transports, // Array of transport methods - tells browser how to communicate with the authenticator: 'internal'=built-in sensor, 'usb'=USB security key, 'nfc'=near-field, 'ble'=Bluetooth
+                        alg: cred.alg, // Algorithm identifier - cryptographic algorithm used: -7=ES256 (ECDSA with SHA-256), -257=RS256 (RSA with SHA-256), -37=PS256 (RSA-PSS with SHA-256)
+                        userHandle: cred.userHandle, // Optional user identifier (base64) - links credential to specific user account, useful when multiple users share same device
+                        signCount: cred.signCount, // Optional signature counter for replay protection - increases with each use, server checks it's higher than last seen value to prevent replay attacks
+                        backupEligible: cred.backupEligible, // Whether credential can be backed up - true if passkey can be synced to other devices (iCloud Keychain, Google Password Manager, etc.)
+                        backupState: cred.backupState, // Current backup status: 'not-backed-up'=only on this device, 'backed-up'=synced to cloud, 'backup-eligible'=can be backed up but hasn't been yet
+                        clientExtensionResults: cred.clientExtensionResults // Any extension results - additional data from WebAuthn extensions, usually empty {} but can contain app-specific metadata
+                    });
+                });
+                
+                webauthnOptions.allowCredentials = webauthnOptions.allowCredentials.map(cred => ({
+                    ...cred, // copy all existing credential properties (type, transports, alg, userHandle, etc.)
+                    id: CryptoUtils.base64UrlToArrayBuffer(cred.id) // Override the ID with converted ArrayBuffer
+                }));
+                this.log('[INFO] Converted credential IDs to ArrayBuffers', { 
+                    count: webauthnOptions.allowCredentials.length 
+                });
             }
             
-            this.log('[INFO] WebAuthn assertion received successfully', {
-                assertion_type: assertion.type, // Always 'public-key' - identifies this as a WebAuthn assertion
-                credential_id_length: assertion.id.byteLength, // Length of credential ID in bytes
-                has_signature: !!assertion.response?.signature, // Whether signature was created (in response object)
-                has_authenticator_data: !!assertion.response?.authenticatorData, // Whether authenticator data is present (in response object)
-                has_client_data: !!assertion.response?.clientDataJSON // Whether client data is present (in response object)
-            });
+            // Get the WebAuthn assertion using the browser's native API - this will trigger the biometric challenge to the user
+            this.log('[INFO] Calling navigator.credentials.get()...');
+            
+            let assertion;
+            try {
+                assertion = await navigator.credentials.get({
+                    publicKey: webauthnOptions
+                });
+                
+                // Validate the assertion was created successfully
+                if (!assertion) {
+                    throw new Error('No assertion received from WebAuthn API');
+                }
+                
+                if (!assertion.id || !assertion.response?.signature) {
+                    throw new Error('Invalid assertion structure - missing required fields');
+                }
+                
+                this.log('[INFO] WebAuthn assertion received successfully', {
+                    assertion_type: assertion.type, // Always 'public-key' - identifies this as a WebAuthn assertion
+                    credential_id_length: assertion.id.byteLength, // Length of credential ID in bytes
+                    has_signature: !!assertion.response?.signature, // Whether signature was created (in response object)
+                    has_authenticator_data: !!assertion.response?.authenticatorData, // Whether authenticator data is present (in response object)
+                    has_client_data: !!assertion.response?.clientDataJSON // Whether client data is present (in response object)
+                });
+                
+            } catch (error) {
+                this.log('[DEBUG] WebAuthn API error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                
+                if (error.name === 'NotAllowedError') {
+                    throw new Error('User cancelled the biometric authentication or denied permission');
+                } else if (error.name === 'SecurityError') {
+                    throw new Error('Security error during WebAuthn authentication - possible tampering detected');
+                } else if (error.name === 'InvalidStateError') {
+                    throw new Error('WebAuthn operation failed - credential may be invalid or expired');
+                } else {
+                    throw new Error(`WebAuthn authentication failed: ${error.message}`);
+                }
+            }
+            
+            // Step 4.8 - Send assertion to server
+            this.log('[INFO] Sending assertion to server for verification...');
+            const assertionData = WebAuthnUtils.credentialToJSON(assertion);
+            const response = await APIUtils.post('/webauthn/authentication/verify', assertionData);
+            this.log('[INFO] Server verified assertion', { user_id: response.user_id });
+            
+            this.setSuccess('authBtn', 'Authenticated!');
+            this.log('[SUCCESS] Passkey authentication successful', response);
             
         } catch (error) {
-            this.log('[DEBUG] WebAuthn API error details:', {
-                name: error.name,
-                message: error.message,
-                stack: error.stack
-            });
-            
-            if (error.name === 'NotAllowedError') {
-                throw new Error('User cancelled the biometric authentication or denied permission');
-            } else if (error.name === 'SecurityError') {
-                throw new Error('Security error during WebAuthn authentication - possible tampering detected');
-            } else if (error.name === 'InvalidStateError') {
-                throw new Error('WebAuthn operation failed - credential may be invalid or expired');
-            } else {
-                throw new Error(`WebAuthn authentication failed: ${error.message}`);
-            }
+            this.setError('authBtn', 'Authentication failed');
+            this.log('[ERROR] Passkey authentication failed:', error);
         }
-        
-        // Step 4.8 - Send assertion to server
-        this.log('[INFO] Sending assertion to server for verification...');
-        const assertionData = WebAuthnUtils.credentialToJSON(assertion);
-        const response = await APIUtils.post('/webauthn/authentication/verify', assertionData);
-        this.log('[INFO] Server verified assertion', { user_id: response.user_id });
-        
-        this.setSuccess('authBtn', 'Authenticated!');
-        this.log('[SUCCESS] Passkey authentication successful', response);
-        
-    } catch (error) {
-        this.setError('authBtn', 'Authentication failed');
-        this.log('[ERROR] Passkey authentication failed:', error);
     }
-}
 ```
 
 **Key Concepts**:
@@ -610,57 +601,49 @@ async authenticatePasskey() {
 The `startLinking()` method contains TODO comments. Here's the complete implementation:
 
 ```javascript
-async startLinking() {
-    this.setLoading('linkBtn', 'Starting linking...');
-    
-    try {
-        this.log('[INFO] Starting cross-device linking...');
+    async startLinking() {
+        this.setLoading('linkBtn', 'Starting linking...');
         
-        // Step 5.1 - Call /link/start endpoint
-        this.log('[INFO] Requesting link initiation from server...');
-        const response = await APIUtils.post('/link/start');
-        this.log('[INFO] Link initiated', { 
-            link_id: response.link_id,
-            link_url_length: response.link_url?.length || 0,
-            link_url: response.link_url
-        });
-        
-        // Step 5.2 - Link initiated, waiting for mobile device to register
-        // Mobile device scans QR and directly calls dpop.fun/reg-link/{link_id}
-        
-        // Step 5.3 - Generate QR code with internet service registration endpoint
-        this.log('[INFO] Generating QR code for mobile device...');
-        this.log('[DEBUG] InternetServiceUtils loaded:', typeof InternetServiceUtils);
-        this.log('[DEBUG] InternetServiceUtils.BASE_URL:', InternetServiceUtils?.BASE_URL);
-        this.log('[DEBUG] response.link_id:', response.link_id);
-        
-        // Force the correct BASE_URL if it's wrong
-        const baseUrl = InternetServiceUtils?.BASE_URL || 'https://dpop.fun';
-        this.log('[DEBUG] Using baseUrl:', baseUrl);
-        
-        const internetLinkUrl = `${baseUrl}/reg-link/${response.link_id}`;
-        this.log('[DEBUG] Constructed internetLinkUrl:', internetLinkUrl);
-        this.log('[DEBUG] Display text (response.link_url):', response.link_url);
-        await QRCodeUtils.generateQRCode(internetLinkUrl, 'qrCode', 200, 'M', response.link_url);
-        this.log('[INFO] QR code generated successfully with registration URL:', internetLinkUrl);
-        this.log('[INFO] Display text shows local URL:', response.link_url);
-        
-        // Step 5.4 - Show QR container and manual completion button
-        document.getElementById('qrContainer').style.display = 'block';
-        document.getElementById('completeLinkBtn').style.display = 'inline-block';
-        document.getElementById('completeLinkBtn').disabled = false;
-        this.log('[INFO] QR code displayed for mobile scanning');
-        
-        // Step 5.5 - Start polling for link completion (both local and internet services)
-        this.log('[INFO] Starting to poll for link completion...');
-        this.currentLinkId = response.link_id; // Store for manual completion
-        this.pollForLinkCompletion(response.link_id);
-        
-    } catch (error) {
-        this.setError('linkBtn', 'Linking failed');
-        this.log('[ERROR] Cross-device linking failed:', error);
+        try {
+            this.log('[INFO] Starting cross-device linking...');
+            
+            // Step 5.1 - Call /link/start endpoint
+            this.log('[INFO] Requesting link initiation from server...');
+            const response = await APIUtils.post('/link/start');
+            this.log('[INFO] Link initiated', { 
+                link_id: response.link_id,
+                link_url_length: response.link_url?.length || 0,
+                link_url: response.link_url
+            });
+            
+            // Step 5.2 - Link initiated, waiting for mobile device to register
+            // Mobile device scans QR and directly calls dpop.fun/reg-link/{link_id}
+            
+            // Step 5.3 - Generate QR code with internet service registration endpoint
+            this.log('[INFO] Generating QR code for mobile device...');
+            // Force the correct BASE_URL if it's wrong
+            const baseUrl = InternetServiceUtils?.BASE_URL || 'https://dpop.fun';
+            
+            const internetLinkUrl = `${baseUrl}/reg-link/${response.link_id}`;
+            await QRCodeUtils.generateQRCode(internetLinkUrl, 'qrCode', 200, 'M', response.link_url);
+            
+            // Step 5.4 - Show QR container and manual completion button
+            document.getElementById('qrContainer').style.display = 'block';
+            document.getElementById('completeLinkBtn').style.display = 'inline-block';
+            document.getElementById('completeLinkBtn').disabled = false;
+            this.log('[INFO] QR code displayed for mobile scanning');
+            
+            // Step 5.5 - Start polling for link completion (both local and internet services)
+            this.log('[INFO] Starting to poll for link completion...');
+            this.currentLinkId = response.link_id; // Store for manual completion
+            this.pollForLinkCompletion(response.link_id);
+            
+        } catch (error) {
+            this.setError('linkBtn', 'Linking failed');
+            this.log('[ERROR] Cross-device linking failed:', error);
+        }
     }
-}
+
 ```
 
 The `pollForLinkCompletion()` method contains TODO comments. Here's the complete implementation:
