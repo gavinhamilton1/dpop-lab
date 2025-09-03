@@ -446,8 +446,10 @@ class QRCodeUtils {
                             const path = url.pathname;
                             const proxyPrefix = URLUtils.getProxyPrefix();
                             if (proxyPrefix) {
-                                textToDisplay = `${window.location.origin}${proxyPrefix}${path}`;
-                                console.log('[QRCodeUtils] Added proxy prefix to displayText (constructor):', { original: displayText, path, withProxy: textToDisplay });
+                                // Remove leading slash from path to avoid double slashes
+                                const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+                                textToDisplay = `${window.location.origin}${proxyPrefix}${cleanPath}`;
+                                console.log('[QRCodeUtils] Added proxy prefix to displayText (constructor):', { original: displayText, path, cleanPath, withProxy: textToDisplay });
                             }
                         }
                         
@@ -479,8 +481,10 @@ class QRCodeUtils {
                             const path = url.pathname;
                             const proxyPrefix = URLUtils.getProxyPrefix();
                             if (proxyPrefix) {
-                                textToDisplay = `${window.location.origin}${proxyPrefix}${path}`;
-                                console.log('[QRCodeUtils] Added proxy prefix to displayText (fallback):', { original: displayText, path, withProxy: textToDisplay });
+                                // Remove leading slash from path to avoid double slashes
+                                const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+                                textToDisplay = `${window.location.origin}${proxyPrefix}${cleanPath}`;
+                                console.log('[QRCodeUtils] Added proxy prefix to displayText (fallback):', { original: displayText, path, cleanPath, withProxy: textToDisplay });
                             }
                         }
                         
