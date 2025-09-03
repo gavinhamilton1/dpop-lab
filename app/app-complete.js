@@ -587,7 +587,10 @@ class DPoPLab {
             
             // Step 5.3 - Generate QR code with internet service registration endpoint
             this.log('[INFO] Generating QR code for mobile device...');
+            this.log('[DEBUG] InternetServiceUtils.BASE_URL:', InternetServiceUtils.BASE_URL);
+            this.log('[DEBUG] response.link_id:', response.link_id);
             const internetLinkUrl = `${InternetServiceUtils.BASE_URL}/reg-link/${response.link_id}`;
+            this.log('[DEBUG] Constructed internetLinkUrl:', internetLinkUrl);
             await QRCodeUtils.generateQRCode(internetLinkUrl, 'qrCode', 200, 'M', response.link_url);
             this.log('[INFO] QR code generated successfully with registration URL:', internetLinkUrl);
             this.log('[INFO] Display text shows local URL:', response.link_url);
@@ -628,13 +631,10 @@ class DPoPLab {
                 async () => {
                     // Check local service first
                     try {
-                        const localResponse = await fetch(`/link/status/${linkId}`);
-                        if (localResponse.ok) {
-                            const localData = await localResponse.json();
-                            if (localData.status === 'linked') {
-                                this.log('[INFO] Link completed via local service!');
-                                return { success: true, source: 'local', data: localData };
-                            }
+                        const localData = await APIUtils.get(`/link/status/${linkId}`);
+                        if (localData.status === 'linked') {
+                            this.log('[INFO] Link completed via local service!');
+                            return { success: true, source: 'local', data: localData };
                         }
                     } catch (localError) {
                         this.log('[WARN] Local service check failed:', localError);

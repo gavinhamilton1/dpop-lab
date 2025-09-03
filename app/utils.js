@@ -683,6 +683,11 @@ class InternetServiceUtils {
     // Base URL for the internet service endpoints
     static BASE_URL = 'https://dpop.fun';
     
+    // Debug: Log when class is defined
+    static {
+        console.log('[DEBUG] InternetServiceUtils class defined with BASE_URL:', this.BASE_URL);
+    }
+    
     /**
      * Register a link ID with the internet service for cross-device linking simulation
      * @param {string} linkId - The link ID to register
@@ -825,4 +830,8 @@ export {
     InternetServiceUtils,
     STORAGE_KEYS
 };
+
+// Debug: Log what's being exported
+console.log('[DEBUG] utils.js exports - InternetServiceUtils:', typeof InternetServiceUtils);
+console.log('[DEBUG] utils.js exports - InternetServiceUtils.BASE_URL:', InternetServiceUtils?.BASE_URL);
 
