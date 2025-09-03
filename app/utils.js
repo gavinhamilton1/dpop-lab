@@ -532,7 +532,9 @@ class APIUtils {
     }
 
     static async get(url, headers = {}) {
-        return this.request(url, { method: 'GET', headers });
+        // Use proxy-aware URL generation
+        const proxyUrl = this.getProxyAwareUrl(url);
+        return this.request(proxyUrl, { method: 'GET', headers });
     }
 
     static async post(url, data = null, headers = {}) {
@@ -547,7 +549,37 @@ class APIUtils {
             }
         }
         
-        return this.request(url, options);
+        // Use proxy-aware URL generation
+        const proxyUrl = this.getProxyAwareUrl(url);
+        return this.request(proxyUrl, options);
+    }
+    
+    static getProxyAwareUrl(url) {
+        // Get proxy prefix from current URL
+        const pathname = window.location.pathname;
+        let proxyPrefix = '';
+        
+        // Check for common proxy patterns
+        if (pathname.includes('/proxy/')) {
+            const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+            if (proxyMatch) {
+                proxyPrefix = proxyMatch[1];
+            }
+        } else if (pathname.includes('/lab/')) {
+            const labMatch = pathname.match(/^(\/lab\/)/);
+            if (labMatch) {
+                proxyPrefix = labMatch[1];
+            }
+        }
+        
+        // If we have a proxy prefix, include it in the URL
+        if (proxyPrefix) {
+            const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
+            return `${window.location.origin}${proxyPrefix}${cleanUrl}`;
+        }
+        
+        // No proxy prefix, return original URL
+        return url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? url : '/' + url}`;
     }
 }
 
@@ -629,7 +661,8 @@ const STORAGE_KEYS = {
 // Export utilities for use in the lab
 // ============================================================================
 
-window.DPoPLabUtils = {
+// Export utilities as ES6 module
+export {
     StorageManager,
     CryptoUtils,
     JWTUtils,
@@ -640,3 +673,4 @@ window.DPoPLabUtils = {
     APIUtils,
     STORAGE_KEYS
 };
+

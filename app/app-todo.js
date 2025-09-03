@@ -5,6 +5,19 @@
  * Students should implement the TODO sections to complete the lab.
  */
 
+// Import utilities from utils.js
+import {
+    StorageManager,
+    CryptoUtils,
+    JWTUtils,
+    DPoPUtils,
+    WebAuthnUtils,
+    QRCodeUtils,
+    URLUtils,
+    APIUtils,
+    STORAGE_KEYS
+} from './utils.js';
+
 class DPoPLab {
     constructor() {
         this.state = {
@@ -52,10 +65,10 @@ class DPoPLab {
             this.log('[INFO] Starting session initialization...');
             
             // TODO: Step 1.1 - Call /session/init endpoint
-            // Hint: Use DPoPLabUtils.APIUtils.post('/session/init', { browser_uuid: 'lab-browser-' + Date.now() })
+            // Hint: Use APIUtils.post('/session/init', { browser_uuid: 'lab-browser-' + Date.now() })
             
             // TODO: Step 1.2 - Store CSRF token and reg_nonce in IndexedDB
-            // Hint: Use DPoPLabUtils.StorageManager to store the response data
+            // Hint: Use StorageManager to store the response data
             
             // TODO: Step 1.3 - Update state and UI
             // Hint: Set this.state.hasSession = true and call this.updateState()
@@ -76,7 +89,7 @@ class DPoPLab {
             this.log('[INFO] Starting BIK registration...');
             
             // TODO: Step 1.4 - Generate EC key pair using Web Crypto API
-            // Hint: Use DPoPLabUtils.CryptoUtils.generateKeyPair()
+            // Hint: Use CryptoUtils.generateKeyPair()
             
             // TODO: Step 1.5 - Store BIK keys in IndexedDB
             // Hint: Store both private key and public JWK
@@ -85,10 +98,10 @@ class DPoPLab {
             // Hint: Retrieve the reg_nonce that was stored during session initialization
             
             // TODO: Step 1.7 - Create BIK JWS with nonce and public key
-            // Hint: Use DPoPLabUtils.DPoPUtils.createBIKJWS(nonce, privateKey, publicJwk)
+            // Hint: Use DPoPUtils.createBIKJWS(nonce, privateKey, publicJwk)
             
             // TODO: Step 1.8 - Send BIK registration to server
-            // Hint: Use DPoPLabUtils.APIUtils.post('/browser/register', jws, { 'X-CSRF-Token': csrfToken })
+            // Hint: Use APIUtils.post('/browser/register', jws, { 'X-CSRF-Token': csrfToken })
             
             // TODO: Step 1.9 - Update state and UI
             // Hint: Set this.state.hasBIK = true and call this.updateState()
@@ -113,17 +126,17 @@ class DPoPLab {
             this.log('[INFO] Starting DPoP binding...');
             
             // TODO: Step 2.1 - Generate DPoP key pair
-            // Hint: Use DPoPLabUtils.CryptoUtils.generateKeyPair()
+            // Hint: Use CryptoUtils.generateKeyPair()
             
             // TODO: Step 2.2 - Store DPoP keys in IndexedDB
             // Hint: Store both private key and public JWK with key ID 'dpop_current'
             
             // TODO: Step 2.3 - Create DPoP proof JWT
-            // Hint: Use DPoPLabUtils.DPoPUtils.createDPoPProof(url, method, nonce, privateKey, publicJwk)
+            // Hint: Use DPoPUtils.createDPoPProof(url, method, nonce, privateKey, publicJwk)
             // Note: For initial binding, nonce is null
             
             // TODO: Step 2.4 - Send DPoP binding request to server
-            // Hint: Use DPoPLabUtils.APIUtils.post('/dpop/bind', dpopJwt, { 'X-CSRF-Token': csrfToken })
+            // Hint: Use APIUtils.post('/dpop/bind', dpopJwt, { 'X-CSRF-Token': csrfToken })
             
             // TODO: Step 2.5 - Store binding token and nonce
             // Hint: Store the response.bind token and any DPoP-Nonce header
@@ -154,10 +167,10 @@ class DPoPLab {
             // Hint: Retrieve DPoP keys and binding token from IndexedDB
             
             // TODO: Step 3.2 - Create DPoP proof for API request
-            // Hint: Use DPoPLabUtils.DPoPUtils.createDPoPProof with the API endpoint URL
+            // Hint: Use DPoPUtils.createDPoPProof with the API endpoint URL
             
             // TODO: Step 3.3 - Send API request with DPoP proof
-            // Hint: Use DPoPLabUtils.APIUtils.post with DPoP and DPoP-Bind headers
+            // Hint: Use APIUtils.post with DPoP and DPoP-Bind headers
             
             this.setSuccess('testBtn', 'Test passed!');
             this.log('[SUCCESS] API test with DPoP successful');
@@ -179,13 +192,13 @@ class DPoPLab {
             this.log('[INFO] Starting passkey registration...');
             
             // TODO: Step 4.1 - Check WebAuthn support
-            // Hint: Use DPoPLabUtils.WebAuthnUtils.isSupported()
+            // Hint: Use WebAuthnUtils.isSupported()
             
             // TODO: Step 4.2 - Get registration options from server
-            // Hint: Use DPoPLabUtils.APIUtils.post('/webauthn/registration/options')
+            // Hint: Use APIUtils.post('/webauthn/registration/options')
             
             // TODO: Step 4.3 - Create WebAuthn credentials
-            // Hint: Use DPoPLabUtils.WebAuthnUtils.createCredentials(options)
+            // Hint: Use WebAuthnUtils.createCredentials(options)
             
             // TODO: Step 4.4 - Send attestation to server for verification
             // Hint: Convert credential to JSON and send to /webauthn/registration/verify
@@ -209,10 +222,10 @@ class DPoPLab {
             this.log('[INFO] Starting passkey authentication...');
             
             // TODO: Step 4.6 - Get authentication options from server
-            // Hint: Use DPoPLabUtils.APIUtils.post('/webauthn/authentication/options')
+            // Hint: Use APIUtils.post('/webauthn/authentication/options')
             
             // TODO: Step 4.7 - Get WebAuthn assertion
-            // Hint: Use DPoPLabUtils.WebAuthnUtils.getCredentials(options)
+            // Hint: Use WebAuthnUtils.getCredentials(options)
             
             // TODO: Step 4.8 - Send assertion to server for verification
             // Hint: Convert assertion to JSON and send to /webauthn/authentication/verify
@@ -237,10 +250,10 @@ class DPoPLab {
             this.log('[INFO] Starting cross-device linking...');
             
             // TODO: Step 5.1 - Request link initiation from server
-            // Hint: Use DPoPLabUtils.APIUtils.post('/link/start')
+            // Hint: Use APIUtils.post('/link/start')
             
             // TODO: Step 5.2 - Generate QR code for mobile device
-            // Hint: Use DPoPLabUtils.QRCodeUtils.generateQRCode(response.link_url, 'qrCode')
+            // Hint: Use QRCodeUtils.generateQRCode(response.link_url, 'qrCode')
             
             // TODO: Step 5.3 - Show QR container and start polling
             // Hint: Display QR code and call this.pollForLinkCompletion(response.link_id)

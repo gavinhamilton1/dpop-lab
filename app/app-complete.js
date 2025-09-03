@@ -5,6 +5,19 @@
  * Students should implement the TODO sections to complete the lab.
  */
 
+// Import utilities from utils.js
+import {
+    StorageManager,
+    CryptoUtils,
+    JWTUtils,
+    DPoPUtils,
+    WebAuthnUtils,
+    QRCodeUtils,
+    URLUtils,
+    APIUtils,
+    STORAGE_KEYS
+} from './utils.js';
+
 class DPoPLab {
     constructor() {
         this.state = {
@@ -53,7 +66,7 @@ class DPoPLab {
             
             // Step 1.1 - Call /session/init endpoint
             this.log('[INFO] Calling /session/init endpoint...');
-            const response = await DPoPLabUtils.APIUtils.post('/session/init', {
+            const response = await APIUtils.post('/session/init', {
                 browser_uuid: 'lab-browser-' + Date.now()
             });
             this.log('[INFO] Server response received', { 
@@ -64,9 +77,9 @@ class DPoPLab {
             
             // Step 1.2 - Store CSRF token and reg_nonce
             this.log('[INFO] Storing session data in IndexedDB...');
-            const storage = new DPoPLabUtils.StorageManager();
-            await storage.put('meta', { id: DPoPLabUtils.STORAGE_KEYS.CSRF, value: response.csrf });
-            await storage.put('meta', { id: DPoPLabUtils.STORAGE_KEYS.REG_NONCE, value: response.reg_nonce });
+            const storage = new StorageManager();
+            await storage.put('meta', { id: STORAGE_KEYS.CSRF, value: response.csrf });
+            await storage.put('meta', { id: STORAGE_KEYS.REG_NONCE, value: response.reg_nonce });
             this.log('[INFO] Session data stored successfully');
             
             // Step 1.3 - Update state and UI
@@ -89,15 +102,15 @@ class DPoPLab {
             
             // Step 1.4 - Generate EC key pair using Web Crypto API
             this.log('[INFO] Generating EC key pair using Web Crypto API...');
-            const keyPair = await DPoPLabUtils.CryptoUtils.generateKeyPair();
+            const keyPair = await CryptoUtils.generateKeyPair();
             this.log('[INFO] Key pair generated successfully');
             
             // Step 1.5 - Store BIK keys in IndexedDB
             this.log('[INFO] Storing BIK keys in IndexedDB...');
-            const storage = new DPoPLabUtils.StorageManager();
-            const publicJwk = await DPoPLabUtils.CryptoUtils.exportPublicKey(keyPair.publicKey);
+            const storage = new StorageManager();
+            const publicJwk = await CryptoUtils.exportPublicKey(keyPair.publicKey);
             await storage.put('keys', {
-                id: DPoPLabUtils.STORAGE_KEYS.BIK_CURRENT,
+                id: STORAGE_KEYS.BIK_CURRENT,
                 privateKey: keyPair.privateKey,
                 publicJwk: publicJwk
             });
@@ -105,19 +118,19 @@ class DPoPLab {
             
             // Step 1.6 - Get stored nonce
             this.log('[INFO] Retrieving registration nonce from storage...');
-            const nonceRecord = await storage.get('meta', DPoPLabUtils.STORAGE_KEYS.REG_NONCE);
+            const nonceRecord = await storage.get('meta', STORAGE_KEYS.REG_NONCE);
             const nonce = nonceRecord.value;
             this.log('[INFO] Nonce retrieved', { nonce_length: nonce?.length || 0 });
             
             // Step 1.7 - Create BIK JWS with nonce and public key
             this.log('[INFO] Creating BIK JWS with nonce and public key...');
-            const jws = await DPoPLabUtils.DPoPUtils.createBIKJWS(nonce, keyPair.privateKey, publicJwk);
+            const jws = await DPoPUtils.createBIKJWS(nonce, keyPair.privateKey, publicJwk);
             this.log('[INFO] BIK JWS created successfully');
             
             // Step 1.8 - Send to /browser/register endpoint
             this.log('[INFO] Sending BIK registration to server...');
-            const csrfRecord = await storage.get('meta', DPoPLabUtils.STORAGE_KEYS.CSRF);
-            const response = await DPoPLabUtils.APIUtils.post('/browser/register', jws, {
+            const csrfRecord = await storage.get('meta', STORAGE_KEYS.CSRF);
+            const response = await APIUtils.post('/browser/register', jws, {
                 'X-CSRF-Token': csrfRecord.value
             });
             this.log('[INFO] Server verified BIK registration', { bik_jkt: response.bik_jkt });
@@ -146,15 +159,15 @@ class DPoPLab {
             
             // Step 2.1 - Generate DPoP key pair
             this.log('[INFO] Generating DPoP key pair...');
-            const dpopKeyPair = await DPoPLabUtils.CryptoUtils.generateKeyPair();
+            const dpopKeyPair = await CryptoUtils.generateKeyPair();
             this.log('[INFO] DPoP key pair generated successfully');
             
             // Step 2.2 - Store DPoP keys
             this.log('[INFO] Storing DPoP keys in IndexedDB...');
-            const storage = new DPoPLabUtils.StorageManager();
-            const publicJwk = await DPoPLabUtils.CryptoUtils.exportPublicKey(dpopKeyPair.publicKey);
+            const storage = new StorageManager();
+            const publicJwk = await CryptoUtils.exportPublicKey(dpopKeyPair.publicKey);
             await storage.put('keys', {
-                id: DPoPLabUtils.STORAGE_KEYS.DPoP_CURRENT,
+                id: STORAGE_KEYS.DPoP_CURRENT,
                 privateKey: dpopKeyPair.privateKey,
                 publicJwk: publicJwk
             });
@@ -162,8 +175,8 @@ class DPoPLab {
             
             // Step 2.3 - Create DPoP JWT with required claims
             this.log('[INFO] Creating DPoP proof JWT...');
-            const dpopJwt = await DPoPLabUtils.DPoPUtils.createDPoPProof(
-                DPoPLabUtils.URLUtils.getAPIURL('dpop/bind'),
+            const dpopJwt = await DPoPUtils.createDPoPProof(
+                URLUtils.getAPIURL('dpop/bind'),
                 'POST',
                 null, // no nonce for initial binding
                 dpopKeyPair.privateKey,
@@ -173,8 +186,8 @@ class DPoPLab {
             
             // Step 2.4 - Send to /dpop/bind endpoint
             this.log('[INFO] Sending DPoP binding request to server...');
-            const csrfRecord = await storage.get('meta', DPoPLabUtils.STORAGE_KEYS.CSRF);
-            const response = await DPoPLabUtils.APIUtils.post('/dpop/bind', dpopJwt, {
+            const csrfRecord = await storage.get('meta', STORAGE_KEYS.CSRF);
+            const response = await APIUtils.post('/dpop/bind', dpopJwt, {
                 'X-CSRF-Token': csrfRecord.value
             });
             this.log('[INFO] Server verified DPoP binding', { 
@@ -184,9 +197,9 @@ class DPoPLab {
             
             // Step 2.5 - Store binding token and nonce
             this.log('[INFO] Storing DPoP binding data...');
-            await storage.put('meta', { id: DPoPLabUtils.STORAGE_KEYS.BIND_TOKEN, value: response.bind });
+            await storage.put('meta', { id: STORAGE_KEYS.BIND_TOKEN, value: response.bind });
             if (response.headers && response.headers['DPoP-Nonce']) {
-                await storage.put('meta', { id: DPoPLabUtils.STORAGE_KEYS.DPoP_NONCE, value: response.headers['DPoP-Nonce'] });
+                await storage.put('meta', { id: STORAGE_KEYS.DPoP_NONCE, value: response.headers['DPoP-Nonce'] });
                 this.log('[INFO] DPoP nonce stored for future requests');
             }
             this.log('[INFO] DPoP binding data stored successfully');
@@ -215,10 +228,10 @@ class DPoPLab {
             
             // Step 3.1 - Get stored DPoP key and binding token
             this.log('[INFO] Retrieving DPoP keys and binding token from storage...');
-            const storage = new DPoPLabUtils.StorageManager();
-            const dpopRecord = await storage.get('keys', DPoPLabUtils.STORAGE_KEYS.DPoP_CURRENT);
-            const bindRecord = await storage.get('meta', DPoPLabUtils.STORAGE_KEYS.BIND_TOKEN);
-            const nonceRecord = await storage.get('meta', DPoPLabUtils.STORAGE_KEYS.DPoP_NONCE);
+            const storage = new StorageManager();
+            const dpopRecord = await storage.get('keys', STORAGE_KEYS.DPoP_CURRENT);
+            const bindRecord = await storage.get('meta', STORAGE_KEYS.BIND_TOKEN);
+            const nonceRecord = await storage.get('meta', STORAGE_KEYS.DPoP_NONCE);
             
             if (!dpopRecord || !bindRecord) {
                 throw new Error('DPoP keys or binding token not found');
@@ -227,8 +240,8 @@ class DPoPLab {
             
             // Step 3.2 - Create DPoP proof for API request
             this.log('[INFO] Creating DPoP proof for API request...');
-            const dpopProof = await DPoPLabUtils.DPoPUtils.createDPoPProof(
-                DPoPLabUtils.URLUtils.getAPIURL('api/test'),
+            const dpopProof = await DPoPUtils.createDPoPProof(
+                URLUtils.getAPIURL('api/test'),
                 'POST',
                 nonceRecord?.value || null,
                 dpopRecord.privateKey,
@@ -238,7 +251,7 @@ class DPoPLab {
             
             // Step 3.3 - Send request to /api/test endpoint
             this.log('[INFO] Sending API request with DPoP proof...');
-            const response = await DPoPLabUtils.APIUtils.post('/api/test', {
+            const response = await APIUtils.post('/api/test', {
                 message: 'Hello from DPoP Lab!',
                 timestamp: Date.now()
             }, {
@@ -271,14 +284,14 @@ class DPoPLab {
             
             // Step 4.1 - Check WebAuthn support
             this.log('[INFO] Checking WebAuthn support...');
-            if (!DPoPLabUtils.WebAuthnUtils.isSupported()) {
+            if (!WebAuthnUtils.isSupported()) {
                 throw new Error('WebAuthn not supported in this browser');
             }
             this.log('[INFO] WebAuthn is supported');
             
             // Step 4.2 - Get registration options from server
             this.log('[INFO] Requesting registration options from server...');
-            const options = await DPoPLabUtils.APIUtils.post('/webauthn/registration/options');
+            const options = await APIUtils.post('/webauthn/registration/options');
             this.log('[INFO] Registration options received', { 
                 challenge_length: options.challenge?.length || 0,
                 rp_id: options.rpId,
@@ -287,13 +300,13 @@ class DPoPLab {
             
             // Step 4.3 - Create credentials with navigator.credentials.create()
             this.log('[INFO] Creating WebAuthn credentials...');
-            const credential = await DPoPLabUtils.WebAuthnUtils.createCredentials(options);
+            const credential = await WebAuthnUtils.createCredentials(options);
             this.log('[INFO] WebAuthn credentials created successfully');
             
             // Step 4.4 - Send attestation to server
             this.log('[INFO] Sending attestation to server for verification...');
-            const attestation = DPoPLabUtils.WebAuthnUtils.credentialToJSON(credential);
-            const response = await DPoPLabUtils.APIUtils.post('/webauthn/registration/verify', attestation);
+            const attestation = WebAuthnUtils.credentialToJSON(credential);
+            const response = await APIUtils.post('/webauthn/registration/verify', attestation);
             this.log('[INFO] Server verified attestation', { credential_id: response.credential_id });
             
             // Step 4.5 - Update state and UI
@@ -316,7 +329,7 @@ class DPoPLab {
             
             // Step 4.6 - Get authentication options from server
             this.log('[INFO] Requesting authentication options from server...');
-            const options = await DPoPLabUtils.APIUtils.post('/webauthn/authentication/options');
+            const options = await APIUtils.post('/webauthn/authentication/options');
             this.log('[INFO] Authentication options received', { 
                 challenge_length: options.challenge?.length || 0,
                 rp_id: options.rpId,
@@ -325,13 +338,13 @@ class DPoPLab {
             
             // Step 4.7 - Get credentials with navigator.credentials.get()
             this.log('[INFO] Getting WebAuthn assertion...');
-            const assertion = await DPoPLabUtils.WebAuthnUtils.getCredentials(options);
+            const assertion = await WebAuthnUtils.getCredentials(options);
             this.log('[INFO] WebAuthn assertion received successfully');
             
             // Step 4.8 - Send assertion to server
             this.log('[INFO] Sending assertion to server for verification...');
-            const assertionData = DPoPLabUtils.WebAuthnUtils.credentialToJSON(assertion);
-            const response = await DPoPLabUtils.APIUtils.post('/webauthn/authentication/verify', assertionData);
+            const assertionData = WebAuthnUtils.credentialToJSON(assertion);
+            const response = await APIUtils.post('/webauthn/authentication/verify', assertionData);
             this.log('[INFO] Server verified assertion', { user_id: response.user_id });
             
             this.setSuccess('authBtn', 'Authenticated!');
@@ -355,7 +368,7 @@ class DPoPLab {
             
             // Step 5.1 - Call /link/start endpoint
             this.log('[INFO] Requesting link initiation from server...');
-            const response = await DPoPLabUtils.APIUtils.post('/link/start');
+            const response = await APIUtils.post('/link/start');
             this.log('[INFO] Link initiated', { 
                 link_id: response.link_id,
                 link_url_length: response.link_url?.length || 0 
@@ -363,7 +376,7 @@ class DPoPLab {
             
             // Step 5.2 - Generate QR code with linking URL
             this.log('[INFO] Generating QR code for mobile device...');
-            await DPoPLabUtils.QRCodeUtils.generateQRCode(response.link_url, 'qrCode');
+            await QRCodeUtils.generateQRCode(response.link_url, 'qrCode');
             this.log('[INFO] QR code generated successfully');
             
             // Step 5.3 - Show QR container and manual completion button
@@ -392,7 +405,7 @@ class DPoPLab {
                 attempts++;
                 this.log(`[INFO] Checking link status (attempt ${attempts}/${maxAttempts})...`);
                 
-                const response = await DPoPLabUtils.APIUtils.get(`/link/status/${linkId}`);
+                const response = await APIUtils.get(`/link/status/${linkId}`);
                 
                 if (response.status === 'linked') {
                     this.log('[INFO] Link completed by mobile device!');
@@ -448,7 +461,7 @@ class DPoPLab {
             this.log('[INFO] Manually completing link...');
             
             // Step 5.5 - Simulate mobile device completing the link
-            const response = await DPoPLabUtils.APIUtils.post(`/link/complete/${this.currentLinkId}`, {
+            const response = await APIUtils.post(`/link/complete/${this.currentLinkId}`, {
                 device_type: 'mobile',
                 user_agent: navigator.userAgent,
                 timestamp: Date.now()
