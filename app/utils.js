@@ -429,115 +429,8 @@ class QRCodeUtils {
             console.log('QRCode object:', QRCode);
             console.log('QRCode methods:', Object.getOwnPropertyNames(QRCode));
             
-            // Try different QR code library APIs
-            if (typeof QRCode.toCanvas === 'function') {
-                // Standard qrcode.js API
-                await new Promise((resolve, reject) => {
-                    QRCode.toCanvas(element, linkUrl.trim(), {
-                        width: size,
-                        margin: 2,
-                        errorCorrectionLevel: errorCorrection,
-                        color: {
-                            dark: '#000000',
-                            light: '#FFFFFF'
-                        }
-                    }, (error) => {
-                        if (error) {
-                            reject(error);
-                            return;
-                        }
-                        resolve(true);
-                    });
-                });
-                
-                // Display the link text underneath the QR code
-                const linkTextElement = document.getElementById('qrLinkText');
-                if (linkTextElement) {
-                    // Ensure displayText has proxy prefix for local URLs
-                    let textToDisplay = displayText || linkUrl.trim();
-                    
-                    // If displayText is a local URL (doesn't start with http), add proxy prefix
-                    if (displayText && !displayText.startsWith('http')) {
-                        const pathname = window.location.pathname;
-                        if (pathname.includes('/proxy/')) {
-                            const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
-                            if (proxyMatch) {
-                                const proxyPrefix = proxyMatch[1];
-                                textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
-                                console.log('[QRCodeUtils] Added proxy prefix to displayText:', { original: displayText, withProxy: textToDisplay });
-                            }
-                        } else if (pathname.includes('/lab/')) {
-                            const labMatch = pathname.match(/^(\/lab\/)/);
-                            if (labMatch) {
-                                const labPrefix = labMatch[1];
-                                textToDisplay = `${window.location.origin}${labPrefix}${displayText}`;
-                                console.log('[QRCodeUtils] Added lab prefix to displayText:', { original: displayText, withLab: textToDisplay });
-                            }
-                        }
-                    }
-                    
-                    console.log('[QRCodeUtils] Display text being set (toCanvas):', { displayText, linkUrl, textToDisplay });
-                    console.log('[QRCodeUtils] Using displayText:', displayText ? 'YES' : 'NO', 'displayText value:', displayText);
-                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
-                }
-            } else if (typeof QRCode.toDataURL === 'function') {
-                // Alternative API - generate data URL and create img element
-                const dataUrl = await new Promise((resolve, reject) => {
-                    QRCode.toDataURL(linkUrl.trim(), {
-                        width: size,
-                        margin: 2,
-                        errorCorrectionLevel: errorCorrection,
-                        color: {
-                            dark: '#000000',
-                            light: '#FFFFFF'
-                        }
-                    }, (error, url) => {
-                        if (error) {
-                            reject(error);
-                            return;
-                        }
-                        resolve(url);
-                    });
-                });
-                
-                const img = document.createElement('img');
-                img.src = dataUrl;
-                img.alt = 'QR Code';
-                element.appendChild(img);
-                
-                // Display the link text underneath the QR code
-                const linkTextElement = document.getElementById('qrLinkText');
-                if (linkTextElement) {
-                    // Ensure displayText has proxy prefix for local URLs
-                    let textToDisplay = displayText || linkUrl.trim();
-                    
-                    // If displayText is a local URL (doesn't start with http), add proxy prefix
-                    if (displayText && !displayText.startsWith('http')) {
-                        const pathname = window.location.pathname;
-                        if (pathname.includes('/proxy/')) {
-                            const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
-                            if (proxyMatch) {
-                                const proxyPrefix = proxyMatch[1];
-                                textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
-                                console.log('[QRCodeUtils] Added proxy prefix to displayText (toDataURL):', { original: displayText, withProxy: textToDisplay });
-                            }
-                        } else if (pathname.includes('/lab/')) {
-                            const labMatch = pathname.match(/^(\/lab\/)/);
-                            if (labMatch) {
-                                const labPrefix = labMatch[1];
-                                textToDisplay = `${window.location.origin}${labPrefix}${displayText}`;
-                                console.log('[QRCodeUtils] Added lab prefix to displayText (toDataURL):', { original: displayText, withLab: textToDisplay });
-                            }
-                        }
-                    }
-                    
-                    console.log('[QRCodeUtils] Display text being set (toDataURL):', { displayText, linkUrl, textToDisplay });
-                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
-                }
-            } else if (typeof QRCode === 'function') {
-                // Constructor-based API (like your working example)
+
                 try {
-                    // Use the exact same approach as your working function
                     new QRCode(element, linkUrl.trim());
                     
                     // Display the link text underneath the QR code
@@ -549,6 +442,7 @@ class QRCodeUtils {
                         // If displayText is a local URL (doesn't start with http), add proxy prefix
                         if (displayText && !displayText.startsWith('http')) {
                             const pathname = window.location.pathname;
+                            console.log('[QRCodeUtils] pathname:', pathname);
                             if (pathname.includes('/proxy/')) {
                                 const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
                                 if (proxyMatch) {
@@ -614,9 +508,7 @@ class QRCodeUtils {
                     
                     return true;
                 }
-            } else {
-                throw new Error(`Unsupported QR code library. Available methods: ${Object.getOwnPropertyNames(QRCode).join(', ')}`);
-            }
+
             
             return true;
         } catch (error) {
