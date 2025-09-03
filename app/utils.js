@@ -376,7 +376,7 @@ class WebAuthnUtils {
 // ============================================================================
 
 class QRCodeUtils {
-    static async generateQRCode(text, elementId, size = 200, errorCorrection = 'M') {
+    static async generateQRCode(text, elementId, size = 200, errorCorrection = 'M', displayText = null) {
         if (!text || !text.trim()) {
             throw new Error('Text input is required');
         }
@@ -445,7 +445,8 @@ class QRCodeUtils {
                 // Display the link text underneath the QR code
                 const linkTextElement = document.getElementById('qrLinkText');
                 if (linkTextElement) {
-                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${linkUrl.trim()}</code>`;
+                    const textToDisplay = displayText || linkUrl.trim();
+                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                 }
             } else if (typeof QRCode.toDataURL === 'function') {
                 // Alternative API - generate data URL and create img element
@@ -475,7 +476,8 @@ class QRCodeUtils {
                 // Display the link text underneath the QR code
                 const linkTextElement = document.getElementById('qrLinkText');
                 if (linkTextElement) {
-                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${linkUrl.trim()}</code>`;
+                    const textToDisplay = displayText || linkUrl.trim();
+                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                 }
             } else if (typeof QRCode === 'function') {
                 // Constructor-based API (like your working example)
@@ -486,7 +488,8 @@ class QRCodeUtils {
                     // Display the link text underneath the QR code
                     const linkTextElement = document.getElementById('qrLinkText');
                     if (linkTextElement) {
-                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${linkUrl.trim()}</code>`;
+                        const textToDisplay = displayText || linkUrl.trim();
+                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                     }
                     
                     return true;
@@ -504,7 +507,8 @@ class QRCodeUtils {
                     // Also display link text for fallback
                     const linkTextElement = document.getElementById('qrLinkText');
                     if (linkTextElement) {
-                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${linkUrl.trim()}</code>`;
+                        const textToDisplay = displayText || linkUrl.trim();
+                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                     }
                     
                     return true;
@@ -672,6 +676,58 @@ class URLUtils {
 }
 
 // ============================================================================
+// Internet Service Integration (Convenience Feature)
+// ============================================================================
+
+class InternetServiceUtils {
+    // Base URL for the internet service endpoints
+    static BASE_URL = 'https://dpop.fun';
+    
+    /**
+     * Register a link ID with the internet service for cross-device linking simulation
+     * @param {string} linkId - The link ID to register
+     * @returns {Promise<Object>} Response from the internet service
+     */
+    static async registerLink(linkId) {
+        try {
+            const response = await fetch(`${this.BASE_URL}/reg-link/${linkId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                return await response.json();
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        } catch (error) {
+            throw new Error(`Internet service registration failed: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Check if a link ID exists in the internet service
+     * @param {string} linkId - The link ID to check
+     * @returns {Promise<Object>} Response from the internet service
+     */
+    static async verifyLink(linkId) {
+        try {
+            const response = await fetch(`${this.BASE_URL}/link-verify/${linkId}`);
+            
+            if (response.ok) {
+                return await response.json();
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        } catch (error) {
+            throw new Error(`Internet service verification failed: ${error.message}`);
+        }
+    }
+}
+
+// ============================================================================
 // Polling Utilities
 // ============================================================================
 
@@ -766,6 +822,7 @@ export {
     URLUtils,
     APIUtils,
     PollingUtils,
+    InternetServiceUtils,
     STORAGE_KEYS
 };
 

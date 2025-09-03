@@ -843,9 +843,35 @@ async def link_page(link_id: str):
         <p>Link ID: <code>{link_id}</code></p>
         <div id="status" class="status pending">
             <p>Connecting to desktop device...</p>
-            <p>This page will automatically complete the link in a few seconds.</p>
+            <p>Click the button below to complete the link when ready.</p>
         </div>
+        <button onclick="completeLink()" id="completeBtn">Complete Link</button>
         <script>
+            async function registerWithInternetService() {{
+                try {{
+                    // Register this link ID with the internet service (dpop.fun)
+                    const response = await fetch('https://dpop.fun/reg-link/{link_id}', {{
+                        method: 'POST',
+                        headers: {{
+                            'Content-Type': 'application/json'
+                        }},
+                        body: JSON.stringify({{
+                            link_id: '{link_id}',
+                            timestamp: Date.now(),
+                            source: 'mobile_page'
+                        }})
+                    }});
+                    
+                    if (response.ok) {{
+                        console.log('Successfully registered with internet service');
+                    }} else {{
+                        console.warn('Failed to register with internet service, continuing with local only');
+                    }}
+                }} catch (error) {{
+                    console.warn('Could not register with internet service, continuing with local only:', error);
+                }}
+            }}
+            
             async function completeLink() {{
                 const statusDiv = document.getElementById('status');
                 
@@ -901,10 +927,11 @@ async def link_page(link_id: str):
                 }}
             }}
             
-            // Auto-complete after 3 seconds
-            setTimeout(() => {{
-                completeLink();
-            }}, 3000);
+            // Register with internet service when page loads
+            registerWithInternetService();
+            
+            // Note: Link completion is now manual - no auto-complete
+            // The mobile device should explicitly complete the link when ready
         </script>
     </body>
     </html>

@@ -15,6 +15,7 @@ import {
     URLUtils,
     APIUtils,
     PollingUtils,
+    InternetServiceUtils,
     STORAGE_KEYS
 } from './utils.js';
 
@@ -581,18 +582,23 @@ class DPoPLab {
                 link_url_length: response.link_url?.length || 0 
             });
             
-            // Step 5.2 - Generate QR code with linking URL
-            this.log('[INFO] Generating QR code for mobile device...');
-            await QRCodeUtils.generateQRCode(response.link_url, 'qrCode');
-            this.log('[INFO] QR code generated successfully');
+            // Step 5.2 - Link initiated, waiting for mobile device to register
+            // Mobile device scans QR and directly calls dpop.fun/reg-link/{link_id}
             
-            // Step 5.3 - Show QR container and manual completion button
+            // Step 5.3 - Generate QR code with internet service registration endpoint
+            this.log('[INFO] Generating QR code for mobile device...');
+            const internetLinkUrl = `${InternetServiceUtils.BASE_URL}/reg-link/${response.link_id}`;
+            await QRCodeUtils.generateQRCode(internetLinkUrl, 'qrCode', 200, 'M', response.link_url);
+            this.log('[INFO] QR code generated successfully with registration URL:', internetLinkUrl);
+            this.log('[INFO] Display text shows local URL:', response.link_url);
+            
+            // Step 5.4 - Show QR container and manual completion button
             document.getElementById('qrContainer').style.display = 'block';
             document.getElementById('completeLinkBtn').style.display = 'inline-block';
             document.getElementById('completeLinkBtn').disabled = false;
             this.log('[INFO] QR code displayed for mobile scanning');
             
-            // Step 5.4 - Start polling for link completion
+            // Step 5.5 - Start polling for link completion (both local and internet services)
             this.log('[INFO] Starting to poll for link completion...');
             this.currentLinkId = response.link_id; // Store for manual completion
             this.pollForLinkCompletion(response.link_id);
@@ -615,23 +621,52 @@ class DPoPLab {
     // ============================================================================
 
     async pollForLinkCompletion(linkId) {
-        // Use the generic polling utility instead of custom polling logic
+        // Use the generic polling utility to check both local and internet services
         try {
             await PollingUtils.pollForStatus(
-                `/link/status/${linkId}`,
-                (response) => response.status === 'linked', // Check if link is completed
+                // Check both local and internet services
+                async () => {
+                    // Check local service first
+                    try {
+                        const localResponse = await fetch(`/link/status/${linkId}`);
+                        if (localResponse.ok) {
+                            const localData = await localResponse.json();
+                            if (localData.status === 'linked') {
+                                this.log('[INFO] Link completed via local service!');
+                                return { success: true, source: 'local', data: localData };
+                            }
+                        }
+                    } catch (localError) {
+                        this.log('[WARN] Local service check failed:', localError);
+                    }
+                    
+                    // Check internet service
+                    try {
+                        const internetData = await InternetServiceUtils.verifyLink(linkId);
+                        if (internetData.found) {
+                            this.log('[INFO] Link completed via internet service!');
+                            return { success: true, source: 'internet', data: internetData };
+                        }
+                    } catch (internetError) {
+                        this.log('[WARN] Internet service check failed:', internetError);
+                    }
+                    
+                    // Neither service shows completion
+                    return { success: false };
+                },
+                (result) => result.success, // Check if either service shows completion
                 {
                     maxAttempts: 60, // 5 minutes max
                     interval: 5000, // Check every 5 seconds
                     onAttempt: (attempt, maxAttempts) => {
                         this.log(`[INFO] Checking link status (attempt ${attempt}/${maxAttempts})...`);
                     },
-                    onSuccess: (response) => {
-                        this.log('[INFO] Link completed by mobile device!');
+                    onSuccess: (result) => {
+                        this.log(`[INFO] Link completed by mobile device via ${result.source} service!`);
                         this.state.isLinked = true;
                         this.updateState();
                         this.setSuccess('linkBtn', 'Device linked!');
-                        this.log('[SUCCESS] Cross-device linking established', response);
+                        this.log('[SUCCESS] Cross-device linking established', result.data);
                         
                         // Hide QR code and manual completion button
                         document.getElementById('qrContainer').style.display = 'none';

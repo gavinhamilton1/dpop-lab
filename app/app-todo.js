@@ -252,11 +252,17 @@ class DPoPLab {
             // TODO: Step 5.1 - Request link initiation from server
             // Hint: Use APIUtils.post('/link/start')
             
-            // TODO: Step 5.2 - Generate QR code for mobile device
-            // Hint: Use QRCodeUtils.generateQRCode(response.link_url, 'qrCode')
+            // TODO: Step 5.2 - Link initiated, waiting for mobile device to register
+            // No action needed here - mobile device scans QR and directly calls dpop.fun/reg-link/{link_id}
+            // This allows mobile devices to register with the internet service for cross-device verification
             
-            // TODO: Step 5.3 - Show QR container and start polling
+            // TODO: Step 5.3 - Generate QR code for mobile device
+            // Hint: Use QRCodeUtils.generateQRCode(registration_url, 'qrCode', 200, 'M', local_url)
+            // This creates a QR code with the registration endpoint (dpop.fun/reg-link/{link_id}) but displays the local URL as text
+            
+            // TODO: Step 5.4 - Show QR container and start polling
             // Hint: Display QR code and call this.pollForLinkCompletion(response.link_id)
+            // The QR code points to dpop.fun/reg-link/{link_id} for direct registration
             
         } catch (error) {
             this.setError('linkBtn', 'Linking failed');
@@ -265,9 +271,12 @@ class DPoPLab {
     }
 
     async pollForLinkCompletion(linkId) {
-        // TODO: Step 5.4 - Implement polling for link completion
-        // Hint: Poll /link/status/{linkId} every 5 seconds until status is 'linked'
+        // TODO: Step 5.5 - Implement polling for link completion
+        // Hint: Poll both local and internet services:
+        // 1. Local: /link/status/{linkId} every 5 seconds until status is 'linked'
+        // 2. Internet: Use InternetServiceUtils.verifyLink(linkId) every 5 seconds until found is true
         // Use a maximum of 60 attempts (5 minutes) with setTimeout
+        // This allows mobile devices to complete the link via either service
     }
 
     async completeLinkManually() {
