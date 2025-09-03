@@ -436,15 +436,20 @@ class QRCodeUtils {
                     // Display the link text underneath the QR code
                     const linkTextElement = document.getElementById('qrLinkText');
                     if (linkTextElement) {
-                        // Ensure displayText has proxy prefix for local URLs
+                                                // Ensure displayText has proxy prefix for local URLs
                         let textToDisplay = displayText || linkUrl.trim();
                         console.log('[QRCodeUtils] textToDisplay:', textToDisplay);
-                        // If displayText is a local URL (doesn't start with http), add proxy prefix
+                        
+                        // If displayText is a complete URL, extract just the path and add proxy prefix
+                        if (displayText && displayText.startsWith('http')) {
+                            const url = new URL(displayText);
+                            const path = url.pathname;
                             const proxyPrefix = URLUtils.getProxyPrefix();
                             if (proxyPrefix) {
-                                textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
-                                console.log('[QRCodeUtils] Added proxy prefix to displayText (constructor):', { original: displayText, withProxy: textToDisplay });
+                                textToDisplay = `${window.location.origin}${proxyPrefix}${path}`;
+                                console.log('[QRCodeUtils] Added proxy prefix to displayText (constructor):', { original: displayText, path, withProxy: textToDisplay });
                             }
+                        }
                         
                         console.log('[QRCodeUtils] Display text being set (constructor):', { displayText, linkUrl, textToDisplay });
                         linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
@@ -468,12 +473,14 @@ class QRCodeUtils {
                         // Ensure displayText has proxy prefix for local URLs
                         let textToDisplay = displayText || linkUrl.trim();
                         
-                        // If displayText is a local URL (doesn't start with http), add proxy prefix
-                        if (displayText && !displayText.startsWith('http')) {
+                        // If displayText is a complete URL, extract just the path and add proxy prefix
+                        if (displayText && displayText.startsWith('http')) {
+                            const url = new URL(displayText);
+                            const path = url.pathname;
                             const proxyPrefix = URLUtils.getProxyPrefix();
                             if (proxyPrefix) {
-                                textToDisplay = `${window.location.origin}${proxyPrefix}${displayText}`;
-                                console.log('[QRCodeUtils] Added proxy prefix to displayText (fallback):', { original: displayText, withProxy: textToDisplay });
+                                textToDisplay = `${window.location.origin}${proxyPrefix}${path}`;
+                                console.log('[QRCodeUtils] Added proxy prefix to displayText (fallback):', { original: displayText, path, withProxy: textToDisplay });
                             }
                         }
                         
