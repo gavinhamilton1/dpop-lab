@@ -390,6 +390,28 @@ class QRCodeUtils {
             throw new Error('QRCode library not loaded. Please ensure qrcode.min.js is loaded before utils.js');
         }
 
+        // Fix proxy path in link URL if needed
+        let linkUrl = text;
+        const pathname = window.location.pathname;
+        if (pathname.includes('/proxy/')) {
+            const proxyMatch = pathname.match(/^(\/proxy\/\d+\/)/);
+            if (proxyMatch) {
+                const proxyPrefix = proxyMatch[1];
+                // Remove the proxy prefix from the server's link_url and add it back
+                const cleanUrl = linkUrl.replace(/^https?:\/\/[^\/]+/, '');
+                linkUrl = `${window.location.origin}${proxyPrefix}${cleanUrl}`;
+                console.log('[QRCodeUtils] Fixed proxy path in link URL:', { original: text, fixed: linkUrl });
+            }
+        } else if (pathname.includes('/lab/')) {
+            const labMatch = pathname.match(/^(\/lab\/)/);
+            if (labMatch) {
+                const labPrefix = labMatch[1];
+                const cleanUrl = linkUrl.replace(/^https?:\/\/[^\/]+/, '');
+                linkUrl = `${window.location.origin}${labPrefix}${cleanUrl}`;
+                console.log('[QRCodeUtils] Fixed lab path in link URL:', { original: text, fixed: linkUrl });
+            }
+        }
+
         try {
             // Clear previous content
             element.innerHTML = '';
@@ -402,7 +424,7 @@ class QRCodeUtils {
             if (typeof QRCode.toCanvas === 'function') {
                 // Standard qrcode.js API
                 await new Promise((resolve, reject) => {
-                    QRCode.toCanvas(element, text.trim(), {
+                    QRCode.toCanvas(element, linkUrl.trim(), {
                         width: size,
                         margin: 2,
                         errorCorrectionLevel: errorCorrection,
@@ -422,12 +444,12 @@ class QRCodeUtils {
                 // Display the link text underneath the QR code
                 const linkTextElement = document.getElementById('qrLinkText');
                 if (linkTextElement) {
-                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${text.trim()}</code>`;
+                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${linkUrl.trim()}</code>`;
                 }
             } else if (typeof QRCode.toDataURL === 'function') {
                 // Alternative API - generate data URL and create img element
                 const dataUrl = await new Promise((resolve, reject) => {
-                    QRCode.toDataURL(text.trim(), {
+                    QRCode.toDataURL(linkUrl.trim(), {
                         width: size,
                         margin: 2,
                         errorCorrectionLevel: errorCorrection,
@@ -452,18 +474,18 @@ class QRCodeUtils {
                 // Display the link text underneath the QR code
                 const linkTextElement = document.getElementById('qrLinkText');
                 if (linkTextElement) {
-                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${text.trim()}</code>`;
+                    linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${linkUrl.trim()}</code>`;
                 }
             } else if (typeof QRCode === 'function') {
                 // Constructor-based API (like your working example)
                 try {
                     // Use the exact same approach as your working function
-                    new QRCode(element, text.trim());
+                    new QRCode(element, linkUrl.trim());
                     
                     // Display the link text underneath the QR code
                     const linkTextElement = document.getElementById('qrLinkText');
                     if (linkTextElement) {
-                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${text.trim()}</code>`;
+                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${linkUrl.trim()}</code>`;
                     }
                     
                     return true;
@@ -473,7 +495,7 @@ class QRCodeUtils {
                     element.innerHTML = `
                         <div style="border: 2px solid #000; padding: 10px; display: inline-block; font-family: monospace; font-size: 12px; line-height: 14px; background: white;">
                             <div style="font-weight: bold; margin-bottom: 5px;">QR Code (Text Fallback)</div>
-                            <div style="word-break: break-all; max-width: 200px;">${text}</div>
+                            <div style="word-break: break-all; max-width: 200px;">${linkUrl}</div>
                             <div style="font-size: 10px; color: #666; margin-top: 5px;">Library: ${Object.getOwnPropertyNames(QRCode).join(', ')}</div>
                         </div>
                     `;
@@ -481,7 +503,7 @@ class QRCodeUtils {
                     // Also display link text for fallback
                     const linkTextElement = document.getElementById('qrLinkText');
                     if (linkTextElement) {
-                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${text.trim()}</code>`;
+                        linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${linkUrl.trim()}</code>`;
                     }
                     
                     return true;

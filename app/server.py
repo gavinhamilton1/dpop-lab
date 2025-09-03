@@ -40,15 +40,13 @@ links = {}
 BASE_DIR = os.path.dirname(__file__)
 
 # Configuration - can be overridden by environment variables
-PROXY_PREFIX = os.environ.get('PROXY_PREFIX', '')  # e.g., '/proxy/8000/'
+PROXY_PREFIX = os.environ.get('PROXY_PREFIX', '/proxy/8000/')  # e.g., '/proxy/8000/'
 HOST = os.environ.get('HOST', '0.0.0.0')
 PORT = int(os.environ.get('PORT', 8000))
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
 if PROXY_PREFIX:
     logger.info(f"Configured with proxy prefix: {PROXY_PREFIX}")
-    # Set root_path for FastAPI to handle proxy paths
-    app.root_path = PROXY_PREFIX
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory=BASE_DIR), name="static")
