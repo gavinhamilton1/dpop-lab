@@ -148,8 +148,103 @@ def verify_dpop_proof(dpop_header: str, dpop_bind: str, http_method: str, http_u
         # 2. Verify the JWT signature using that public key
         # 3. Verify the DPoP-Bind token hash matches the JWT
         
+        # Step 1: Extract the public key from the DPoP-Bind token
+        if not dpop_bind or not dpop_bind.startswith('bind_'):
+            print(f"[ERROR] Invalid DPoP-Bind token format: {dpop_bind}")
+            return False, {}
+        
+        # Find the session that has this binding token
+        session_found = None
+        for session_id, session_data in sessions.items():
+            if session_data.get("dpop_bind") == dpop_bind:
+                session_found = session_data
+                break
+        
+        if not session_found:
+            print(f"[ERROR] DPoP-Bind token not found in any session: {dpop_bind}")
+            return False, {}
+        
+        # Extract the stored DPoP public key from the session
+        dpop_jwk = session_found.get("dpop_jwk")
+        if not dpop_jwk:
+            print(f"[ERROR] No DPoP public key found in session for binding: {dpop_bind}")
+            return False, {}
+        
+        # Step 2: Verify the JWT signature using the stored public key
+        try:
+            # Convert JWK to PEM format for PyJWT verification
+            from cryptography.hazmat.primitives.asymmetric import ec
+            from cryptography.hazmat.primitives import serialization
+            from cryptography.hazmat.primitives.serialization import load_pem_public_key
+            import hashlib
+            
+            # Extract coordinates from JWK
+            x_coord = base64.urlsafe_b64decode(dpop_jwk["x"] + "==")
+            y_coord = base64.urlsafe_b64decode(dpop_jwk["y"] + "==")
+            
+            # Create public key from coordinates
+            public_numbers = ec.EllipticCurvePublicNumbers(
+                int.from_bytes(x_coord, 'big'),
+                int.from_bytes(y_coord, 'big'),
+                ec.SECP256R1()
+            )
+            public_key = public_numbers.public_key()
+            
+            # Convert to PEM format
+            pem_public_key = public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+            
+            # Verify the JWT signature
+            verified_payload = jwt.decode(
+                dpop_header, 
+                pem_public_key, 
+                algorithms=["ES256"],
+                options={"verify_signature": True}
+            )
+            
+            print(f"[INFO] JWT signature verified successfully using stored public key")
+            
+        except Exception as e:
+            print(f"[ERROR] JWT signature verification failed: {str(e)}")
+            return False, {}
+        
+        # Step 3: Verify the DPoP-Bind token matches the stored binding JWT
+        try:
+            # Get the stored binding JWT from the session
+            stored_binding_jwt = session_found.get("dpop_binding_jwt")
+            if not stored_binding_jwt:
+                print(f"[ERROR] No stored binding JWT found in session")
+                return False, {}
+            
+            # Create the expected hash from the stored binding JWT
+            stored_parts = stored_binding_jwt.split('.')
+            if len(stored_parts) != 3:
+                print(f"[ERROR] Invalid stored binding JWT format")
+                return False, {}
+            
+            stored_header_payload = f"{stored_parts[0]}.{stored_parts[1]}"
+            expected_hash = hashlib.sha256(stored_header_payload.encode('utf-8')).hexdigest()
+            expected_bind_token = f"bind_{expected_hash}"
+            
+            if dpop_bind != expected_bind_token:
+                print(f"[ERROR] DPoP-Bind token mismatch:")
+                print(f"  Expected: {expected_bind_token}")
+                print(f"  Received: {dpop_bind}")
+                print(f"  From stored binding JWT hash: {expected_hash}")
+                return False, {}
+            
+            print(f"[INFO] DPoP-Bind token verified successfully against stored binding JWT")
+            
+        except Exception as e:
+            print(f"[ERROR] DPoP-Bind token verification failed: {str(e)}")
+            return False, {}
+        
         print(f"[INFO] DPoP proof validation successful")
         print(f"[DEBUG] DPoP claims: typ={typ}, alg={alg}, htm={htm}, htu={htu}, iat={iat}, jti={jti}")
+        print(f"[DEBUG] DPoP signature verified with public key from session")
+        print(f"[DEBUG] DPoP-Bind token hash verified")
         
         return True, payload
         
@@ -370,11 +465,22 @@ async def dpop_bind(request: Request):
             
             print(f"[DEBUG] All DPoP claims validated successfully")
             
-            # Extract public key from JWT header (if present)
-            # In a real implementation, you would verify the signature here
-            dpop_jkt = f"dpop_{secrets.token_hex(8)}"
+            # Extract public key from JWT header (JWK)
+            dpop_jwk = header.get("jwk")
+            if not dpop_jwk:
+                print(f"[ERROR] No JWK found in DPoP JWT header")
+                raise HTTPException(status_code=400, detail="No JWK in DPoP JWT")
             
-            # Store DPoP claims for future verification
+            # Validate JWK structure
+            if not all(key in dpop_jwk for key in ["kty", "crv", "x", "y"]):
+                print(f"[ERROR] Invalid JWK structure: missing required fields")
+                raise HTTPException(status_code=400, detail="Invalid JWK structure")
+            
+            if dpop_jwk["kty"] != "EC" or dpop_jwk["crv"] != "P-256":
+                print(f"[ERROR] Unsupported key type: {dpop_jwk['kty']}, curve: {dpop_jwk['crv']}")
+                raise HTTPException(status_code=400, detail="Unsupported key type or curve")
+            
+            # Store DPoP claims, JWK, and the original binding JWT for future verification
             session["dpop_claims"] = {
                 "typ": typ,
                 "alg": alg,
@@ -383,9 +489,12 @@ async def dpop_bind(request: Request):
                 "iat": iat,
                 "jti": jti
             }
+            session["dpop_jwk"] = dpop_jwk
+            session["dpop_binding_jwt"] = dpop_jwt  # Store the original JWT used for binding
             
             print(f"[INFO] DPoP binding successful for session {session_id[:8]}")
             print(f"[DEBUG] DPoP claims: {session['dpop_claims']}")
+            print(f"[DEBUG] DPoP JWK stored: {dpop_jwk['kty']}, {dpop_jwk['crv']}")
             
         except Exception as e:
             print(f"[ERROR] DPoP verification failed: {str(e)}")
@@ -394,20 +503,25 @@ async def dpop_bind(request: Request):
             print(f"[ERROR] Traceback: {traceback.format_exc()}")
             raise HTTPException(status_code=400, detail=f"DPoP verification failed: {str(e)}")
         
-        # Generate binding token (mock)
-        bind_token = f"bind_{secrets.token_hex(16)}"
+        # Generate binding token based on JWT hash
+        import hashlib
+        header_payload = f"{parts[0]}.{parts[1]}"
+        bind_hash = hashlib.sha256(header_payload.encode('utf-8')).hexdigest()
+        bind_token = f"bind_{bind_hash}"
         next_nonce = generate_nonce()
         
+        print(f"[DEBUG] Generated binding token: {bind_token}")
+        print(f"[DEBUG] From JWT hash: {bind_hash}")
+        print(f"[DEBUG] JWT header+payload: {header_payload[:100]}...")
+        
         # Update session
-        session["dpop_jkt"] = dpop_jkt
+        session["dpop_bind"] = bind_token  # Store for lookup in verification
         session["state"] = "bound"
-        session["bind_token"] = bind_token
         session["current_nonce"] = next_nonce
         
         # Return response with binding token and nonce
         response = JSONResponse({
             "bind": bind_token,
-            "cnf": {"dpop_jkt": dpop_jkt},
             "expires_at": int(time.time()) + 3600  # 1 hour
         })
         response.headers["DPoP-Nonce"] = next_nonce

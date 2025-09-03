@@ -55,7 +55,7 @@ class DPoPLab {
     }
 
     // ============================================================================
-    // STEP 1: Browser Identity Key (BIK) Registration
+    // STEP 1a: Session Initialization
     // ============================================================================
 
     async initializeSession() {
@@ -64,7 +64,7 @@ class DPoPLab {
         try {
             this.log('[INFO] Starting session initialization...');
             
-            // Step 1.1 - Call /session/init endpoint to get CSRF token and reg_nonce
+            // Step 1.1 - Call /session/init endpoint to get CSRF token and reg_nonce from the server
             this.log('[INFO] Calling /session/init endpoint...');
             const response = await APIUtils.post('/session/init', {
                 browser_uuid: 'lab-browser-' + crypto.randomUUID() 
@@ -94,6 +94,11 @@ class DPoPLab {
         }
     }
 
+
+    // ============================================================================
+    // STEP 1b: Browser Identity Key (BIK) Registration
+    // ============================================================================
+   
     async registerBIK() {
         this.setLoading('bikBtn', 'Registering BIK...');
         
@@ -353,7 +358,7 @@ class DPoPLab {
     }
 
     // ============================================================================
-    // STEP 4: WebAuthn Passkey Support
+    // STEP 4a: WebAuthn Passkey Creation
     // ============================================================================
 
     async registerPasskey() {
@@ -428,6 +433,10 @@ class DPoPLab {
             this.log('[ERROR] Passkey registration failed:', error);
         }
     }
+
+    // ============================================================================
+    // STEP 4b: WebAuthn Passkey Authentication
+    // ============================================================================
 
     async authenticatePasskey() {
         this.setLoading('authBtn', 'Authenticating...');
