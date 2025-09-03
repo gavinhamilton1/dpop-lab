@@ -438,7 +438,7 @@ class QRCodeUtils {
                     if (linkTextElement) {
                         // Ensure displayText has proxy prefix for local URLs
                         let textToDisplay = displayText || linkUrl.trim();
-                        
+                        console.log('[QRCodeUtils] textToDisplay:', textToDisplay);
                         // If displayText is a local URL (doesn't start with http), add proxy prefix
                         if (displayText && !displayText.startsWith('http')) {
                             const pathname = window.location.pathname;
