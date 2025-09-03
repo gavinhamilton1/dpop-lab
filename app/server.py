@@ -271,11 +271,16 @@ async def webauthn_registration_options(request: Request):
         # Generate registration options
         challenge = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8').rstrip('=')
         
+        # Get the actual domain from the request
+        host = request.headers.get("host", "localhost")
+        # Extract just the domain part (remove port if present)
+        rp_id = host.split(":")[0]
+        
         options = {
             "challenge": challenge,
             "rp": {
                 "name": "DPoP Lab",
-                "id": "localhost"
+                "id": rp_id
             },
             "user": {
                 "id": base64.urlsafe_b64encode(session_id.encode()).decode('utf-8').rstrip('='),
@@ -366,9 +371,14 @@ async def webauthn_authentication_options(request: Request):
         # Generate authentication options
         challenge = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8').rstrip('=')
         
+        # Get the actual domain from the request
+        host = request.headers.get("host", "localhost")
+        # Extract just the domain part (remove port if present)
+        rp_id = host.split(":")[0]
+        
         options = {
             "challenge": challenge,
-            "rpId": "localhost",
+            "rpId": rp_id,
             "timeout": 60000,
             "userVerification": "preferred"
         }

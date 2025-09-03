@@ -294,8 +294,8 @@ class DPoPLab {
             const options = await APIUtils.post('/webauthn/registration/options');
             this.log('[INFO] Registration options received', { 
                 challenge_length: options.challenge?.length || 0,
-                rp_id: options.rpId,
-                user_verification: options.userVerification 
+                rp_id: options.rp?.id,
+                user_verification: options.authenticatorSelection?.userVerification 
             });
             
             // Step 4.3 - Create credentials with navigator.credentials.create()
@@ -332,7 +332,7 @@ class DPoPLab {
             const options = await APIUtils.post('/webauthn/authentication/options');
             this.log('[INFO] Authentication options received', { 
                 challenge_length: options.challenge?.length || 0,
-                rp_id: options.rpId,
+                rp_id: options.rp?.id,
                 allow_credentials_count: options.allowCredentials?.length || 0 
             });
             
