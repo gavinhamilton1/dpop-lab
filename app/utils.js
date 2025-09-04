@@ -377,7 +377,6 @@ class WebAuthnUtils {
 
 class QRCodeUtils {
     static async generateQRCode(text, elementId, size = 200, errorCorrection = 'M', displayText = null) {
-        console.log('[QRCodeUtils] generateQRCode called with:', { text, elementId, size, errorCorrection, displayText });
         
         if (!text || !text.trim()) {
             throw new Error('Text input is required');
@@ -406,7 +405,6 @@ class QRCodeUtils {
                     // Remove the proxy prefix from the server's link_url and add it back
                     const cleanUrl = linkUrl.replace(/^https?:\/\/[^\/]+/, '');
                     linkUrl = `${window.location.origin}${proxyPrefix}${cleanUrl}`;
-                    console.log('[QRCodeUtils] Fixed proxy path in local link URL:', { original: text, fixed: linkUrl });
                 }
             } else if (pathname.includes('/lab/')) {
                 const labMatch = pathname.match(/^(\/lab\/)/);
@@ -414,22 +412,14 @@ class QRCodeUtils {
                     const labPrefix = labMatch[1];
                     const cleanUrl = linkUrl.replace(/^https?:\/\/[^\/]+/, '');
                     linkUrl = `${window.location.origin}${labPrefix}${cleanUrl}`;
-                    console.log('[QRCodeUtils] Fixed lab path in local link URL:', { original: text, fixed: linkUrl });
                 }
             }
-        } else {
-            console.log('[QRCodeUtils] External URL detected, skipping proxy path fixing:', text);
         }
 
         try {
             // Clear previous content
             element.innerHTML = '';
             
-            // Debug: log available QRCode methods
-            console.log('QRCode object:', QRCode);
-            console.log('QRCode methods:', Object.getOwnPropertyNames(QRCode));
-            
-
                 try {
                     new QRCode(element, linkUrl.trim());
                     
@@ -438,7 +428,6 @@ class QRCodeUtils {
                     if (linkTextElement) {
                                                 // Ensure displayText has proxy prefix for local URLs
                         let textToDisplay = displayText || linkUrl.trim();
-                        console.log('[QRCodeUtils] textToDisplay:', textToDisplay);
                         
                         // If displayText is a complete URL, extract just the path and add proxy prefix
                         if (displayText && displayText.startsWith('http')) {
@@ -449,11 +438,9 @@ class QRCodeUtils {
                                 // Remove leading slash from path to avoid double slashes
                                 const cleanPath = path.startsWith('/') ? path.slice(1) : path;
                                 textToDisplay = `${window.location.origin}${proxyPrefix}${cleanPath}`;
-                                console.log('[QRCodeUtils] Added proxy prefix to displayText (constructor):', { original: displayText, path, cleanPath, withProxy: textToDisplay });
                             }
                         }
                         
-                        console.log('[QRCodeUtils] Display text being set (constructor):', { displayText, linkUrl, textToDisplay });
                         linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                     }
                     
@@ -484,11 +471,9 @@ class QRCodeUtils {
                                 // Remove leading slash from path to avoid double slashes
                                 const cleanPath = path.startsWith('/') ? path.slice(1) : path;
                                 textToDisplay = `${window.location.origin}${proxyPrefix}${cleanPath}`;
-                                console.log('[QRCodeUtils] Added proxy prefix to displayText (fallback):', { original: displayText, path, cleanPath, withProxy: textToDisplay });
                             }
                         }
                         
-                        console.log('[QRCodeUtils] Display text being set (fallback):', { displayText, linkUrl, textToDisplay });
                         linkTextElement.innerHTML = `<strong>Link URL:</strong><br><code style="background: #f5f5f5; padding: 5px; border-radius: 3px;">${textToDisplay}</code>`;
                     }
                     
@@ -658,7 +643,6 @@ class URLUtils {
         // This ensures the htu claim matches what the server expects
         const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
         const fullUrl = `${window.location.origin}${cleanEndpoint}`;
-        console.log('[URLUtils] getDPoPURI:', { endpoint, cleanEndpoint, fullUrl, note: 'Full URL without proxy prefix for DPoP htu' });
         return fullUrl;
     }
 }
@@ -670,12 +654,7 @@ class URLUtils {
 class InternetServiceUtils {
     // Base URL for the internet service endpoints
     static BASE_URL = 'https://dpop.fun';
-    
-    // Debug: Log when class is defined
-    static {
-        console.log('[DEBUG] InternetServiceUtils class defined with BASE_URL:', this.BASE_URL);
-    }
-    
+        
     /**
      * Register a link ID with the internet service for cross-device linking simulation
      * @param {string} linkId - The link ID to register
@@ -874,7 +853,4 @@ export {
     STORAGE_KEYS
 };
 
-// Debug: Log what's being exported
-console.log('[DEBUG] utils.js exports - InternetServiceUtils:', typeof InternetServiceUtils);
-console.log('[DEBUG] utils.js exports - InternetServiceUtils.BASE_URL:', InternetServiceUtils?.BASE_URL);
 
